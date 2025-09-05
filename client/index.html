@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<title>Attendance Manager</title>
+	<link rel="stylesheet" href="index.css" >
+</head>
+<body>
+	<div id="app">
+		<div class="topbar">
+			<button id="back-btn" class="ghost hidden">← Back</button>
+		</div>
+		<!-- Auth Views -->
+		<section id="auth-view" class="view">
+			<div class="card">
+				<h1>Attendance Manager</h1>
+
+				<form id="login-form" class="form">
+					<label>Email
+						<input type="email" id="login-email" required />
+					</label>
+					<label>Password
+						<input type="password" id="login-password" required />
+					</label>
+					<button type="submit" class="primary">Log in</button>
+					<div class="links-row">
+						<a href="#" id="link-to-signup">Don't have an account? Sign up</a>
+						<a href="#" id="link-forgot">Forgot password?</a>
+					</div>
+				</form>
+
+				<form id="signup-form" class="form hidden">
+					<label>Full name
+						<input type="text" id="signup-name" required />
+					</label>
+					<label>Email
+						<input type="email" id="signup-email" required />
+					</label>
+					<label>Password
+						<input type="password" id="signup-password" required minlength="6" />
+					</label>
+					<button type="submit" class="primary">Create account</button>
+					<div class="links-row">
+						<a href="#" id="link-to-login">Already have an account? Log in</a>
+					</div>
+				</form>
+			</div>
+		</section>
+
+		<!-- Unit Setup View -->
+		<section id="unit-view" class="view hidden">
+			<header class="toolbar">
+				<div class="left">
+					<h2>Welcome, <span id="lecturer-name"></span></h2>
+				</div>
+				<div class="right">
+					<button id="logout-btn" class="ghost">Log out</button>
+				</div>
+			</header>
+			<div class="card">
+				<h3>Set up your unit</h3>
+				<form id="unit-form" class="form row">
+					<label>Unit name
+						<input type="text" id="unit-name" placeholder="e.g., Intro to CS" required />
+					</label>
+					<label>Unit code
+						<input type="text" id="unit-code" placeholder="e.g., CSC101" required />
+					</label>
+					<label>Students CSV
+						<input type="file" id="students-file" accept=".csv" />
+						<small>CSV with columns: registrationNumber,name</small>
+					</label>
+					<button type="submit" class="primary">Save unit</button>
+				</form>
+				<p class="muted">Or start with an empty list and add students later.</p>
+			</div>
+		</section>
+
+		<!-- Dashboard View -->
+		<section id="dashboard-view" class="view hidden">
+			<header class="toolbar">
+				<div class="left">
+					<h2 id="unit-title"></h2>
+					<p class="muted" id="today-date"></p>
+				</div>
+				<div class="right">
+					<button id="download-btn" class="secondary">Download Present Students CSV</button>
+					<button id="reset-btn" class="ghost">Reset for next session</button>
+					<button id="manage-unit-btn" class="ghost">Manage unit</button>
+					<button id="logout-btn-2" class="ghost">Log out</button>
+				</div>
+			</header>
+			<div class="card">
+				<div class="list-head">
+					<div>Name</div>
+					<div>Reg. No</div>
+					<div>Status</div>
+				</div>
+				<div id="students-list" class="list"></div>
+				<div class="list-foot">
+					<p class="muted">Students loaded from demo data. API integration coming soon.</p>
+				</div>
+			</div>
+		</section>
+	</div>
+
+	<script src="index.js"></script>
+</body>
+</html>

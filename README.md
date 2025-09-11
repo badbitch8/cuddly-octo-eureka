@@ -1,5 +1,76 @@
 # Attendance Manager
 
+## PHP + MySQL API (XAMPP)
+
+This project includes a simple PHP API for managing students and units using MySQL (MariaDB) via XAMPP. Students for a unit are derived by matching `year_of_study`.
+
+### Endpoints
+
+- `GET /api/students.php` — list students
+- `GET /api/students.php?id=1` — get one student
+- `POST /api/students.php` — create student `{ name, email }`
+- `PUT /api/students.php` — update student `{ id, name?, email? }`
+- `DELETE /api/students.php?id=1` — delete student
+
+- `GET /api/units.php` — list units
+- `GET /api/units.php?id=1` — get one unit
+- `POST /api/units.php` — create unit `{ code, title }`
+- `PUT /api/units.php` — update unit `{ id, code?, title? }`
+- `DELETE /api/units.php?id=1` — delete unit
+
+- `GET /api/unit_students.php?unit_code=CS101` — get students for a unit by `year_of_study`
+
+- `POST /api/import.php` — bulk import JSON of units, students, and enrollments
+  - Body example:
+    ```json
+    {
+      "units": [{ "code": "CS101", "title": "Intro to CS" }],
+      "students": [
+        { "name": "Alice Johnson", "email": "CS001@example.edu" },
+        { "name": "Bob Smith", "email": "CS002@example.edu" }
+      ],
+      "enrollments": [
+        { "student_email": "CS001@example.edu", "unit_code": "CS101" },
+        { "student_email": "CS002@example.edu", "unit_code": "CS101" }
+      ]
+    }
+    ```
+
+All requests/response bodies are JSON. CORS is enabled for development.
+
+### Setup (XAMPP on Windows)
+
+1. Copy the `api` folder into your XAMPP `htdocs` so the path becomes something like:
+   - `C:\xampp\htdocs\atte\api` (or adjust to your environment)
+2. Start Apache and MySQL from XAMPP Control Panel.
+3. Create the database and tables:
+   - Open `http://localhost/phpmyadmin/`
+   - Create database `atte` if it doesn't exist
+   - Open the SQL tab and run the contents of `api/schema.sql`
+4. Configure database credentials if needed:
+   - Edit `api/config.php` and set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` if different from XAMPP defaults.
+5. Test endpoints (examples use PowerShell):
+
+```powershell
+curl -Method GET http://localhost/atte/api/students.php | cat
+curl -Method POST http://localhost/atte/api/students.php -ContentType 'application/json' -Body '{"name":"Alice","email":"alice@example.com"}' | cat
+curl -Method POST http://localhost/atte/api/units.php -ContentType 'application/json' -Body '{"code":"CS101","title":"Intro to CS"}' | cat
+curl -Method GET "http://localhost/atte/api/units_search.php?q=CS" | cat
+curl -Method GET "http://localhost/atte/api/unit_students.php?unit_code=CS101" | cat
+```
+
+### Connect client
+
+From your frontend in `client`, you can call the API using `fetch` to `http://localhost/atte/api/...` (or your chosen path). Ensure the client is served from a browser (e.g., open `client/index.html`).
+
+### Notes
+- Use `/api/import.php` to seed from existing CSVs: convert CSVs to JSON structure (or import CSVs via phpMyAdmin) and post once.
+
+
+- The API uses PDO with prepared statements.
+- Unique constraints prevent duplicate emails for students and duplicate unit codes.
+- Deleting a student or unit cascades to remove related enrollments.
+
 A modern, responsive web application for managing student attendance in educational institutions. Built with vanilla HTML, CSS, and JavaScript.
 
 ## Features

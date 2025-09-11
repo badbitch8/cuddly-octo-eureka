@@ -1,4 +1,6 @@
 (function () {
+	const API_BASE = storageGetEnv('API_BASE', 'http://localhost:8000/api');
+
 	const views = {
 		auth: document.getElementById('auth-view'),
 		unit: document.getElementById('unit-view'),
@@ -22,6 +24,8 @@
 		unitTitle: document.getElementById('unit-title'),
 		date: document.getElementById('today-date'),
 		studentsList: document.getElementById('students-list'),
+		unitNameList: document.getElementById('unit-name-list'),
+		unitCodeList: document.getElementById('unit-code-list'),
 		downloadBtn: document.getElementById('download-btn'),
 		resetBtn: document.getElementById('reset-btn'),
 		manageUnitBtn: document.getElementById('manage-unit-btn'),
@@ -64,6 +68,30 @@
 		return d.toISOString().slice(0, 10); // YYYY-MM-DD
 	}
 
+	// API helpers
+	async function apiGet(path) {
+		const res = await fetch(`${API_BASE}${path}`, { headers: { 'Accept': 'application/json' } });
+		if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
+		return res.json();
+	}
+
+	async function apiJson(path, method, body) {
+		const res = await fetch(`${API_BASE}${path}`, {
+			method,
+			headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+			body: JSON.stringify(body)
+		});
+		if (!res.ok) throw new Error(`${method} ${path} failed: ${res.status}`);
+		return res.json();
+	}
+
+	function storageGetEnv(key, fallback) {
+		try {
+			const v = localStorage.getItem(key);
+			return v ? v : fallback;
+		} catch (_) { return fallback; }
+	}
+
 	function ensureTodaySession() {
 		const today = todayKey();
 		if (getAttendanceDate() !== today) {
@@ -77,17 +105,45 @@
 	function show(view) {
 		Object.values(views).forEach(v => v.classList.add('hidden'));
 		views[view].classList.remove('hidden');
-		updateBackButton(view);
+		updateHeader(view);
+		
+		// Setup unit selection when unit view is shown
+		if (view === 'unit') {
+			setupUnitSelection();
+		}
 	}
 
-	function updateBackButton(view) {
+	function updateHeader(view) {
 		const backBtn = document.getElementById('back-btn');
-		if (!backBtn) return;
-		// Back logic: from signup -> login, from unit/dashboard -> auth (if logged out) or unit
+		const headerTitle = document.getElementById('header-title');
+		const headerUnitTitle = document.getElementById('header-unit-title');
+		const headerDate = document.getElementById('header-date');
+		const headerActions = document.getElementById('header-actions');
+		const logoutBtn = document.getElementById('logout-btn');
+		
+		// Hide all header elements first
+		if (backBtn) backBtn.classList.add('hidden');
+		if (headerTitle) headerTitle.classList.add('hidden');
+		if (headerUnitTitle) headerUnitTitle.classList.add('hidden');
+		if (headerDate) headerDate.classList.add('hidden');
+		if (headerActions) headerActions.classList.add('hidden');
+		if (logoutBtn) logoutBtn.classList.add('hidden');
+		
 		if (view === 'auth') {
-			backBtn.classList.add('hidden');
-		} else {
-			backBtn.classList.remove('hidden');
+			// Auth view - minimal header
+			if (backBtn) backBtn.classList.add('hidden');
+		} else if (view === 'unit') {
+			// Unit view - show back button, welcome message, and logout
+			if (backBtn) backBtn.classList.remove('hidden');
+			if (headerTitle) headerTitle.classList.remove('hidden');
+			if (logoutBtn) logoutBtn.classList.remove('hidden');
+		} else if (view === 'dashboard') {
+			// Dashboard view - show back button, unit title, date, actions, and logout
+			if (backBtn) backBtn.classList.remove('hidden');
+			if (headerUnitTitle) headerUnitTitle.classList.remove('hidden');
+			if (headerDate) headerDate.classList.remove('hidden');
+			if (headerActions) headerActions.classList.remove('hidden');
+			if (logoutBtn) logoutBtn.classList.remove('hidden');
 		}
 	}
 
@@ -111,8 +167,8 @@
 				<div>${escapeHtml(s.name || '')}</div>
 				<div>${escapeHtml(s.registrationNumber || '')}</div>
 				<div class="status-group">
-					<button class="secondary status-present ${s.status === 'present' ? 'active' : ''}" data-index="${index}" data-status="present">Present</button>
-					<button class="danger status-absent ${s.status === 'absent' ? 'active' : ''}" data-index="${index}" data-status="absent">Absent</button>
+					<button class="status-present ${s.status === 'present' ? 'active' : ''}" data-index="${index}" data-status="present">Present</button>
+					<button class="status-absent ${s.status === 'absent' ? 'active' : ''}" data-index="${index}" data-status="absent">Absent</button>
 				</div>
 			`;
 			els.studentsList.appendChild(row);
@@ -128,7 +184,10 @@
 
 	function updateStatus(index, status) {
 		const students = getStudents();
-		if (!students[index]) return;
+		if (!students[index]) {
+			console.warn('Student not found at index:', index);
+			return;
+		}
 		students[index].status = status;
 		saveStudents(students);
 		renderStudents();
@@ -139,9 +198,7 @@
 		const students = getStudents();
 		const today = todayKey();
 		
-		// Filter to only include students marked as "present"
 		const presentStudents = students.filter(s => s.status === 'present');
-		
 		if (presentStudents.length === 0) {
 			alert('No students have been marked as present yet. Please mark some students as present before downloading.');
 			return;
@@ -170,7 +227,6 @@
 	}
 
 	function parseStudentsCsv(text) {
-		// expects header with registrationNumber,name (order flexible)
 		const lines = text.split(/\r?\n/).filter(Boolean);
 		if (lines.length === 0) return [];
 		const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
@@ -186,6 +242,46 @@
 			out.push({ registrationNumber, name, status: 'unmarked' });
 		}
 		return out;
+	}
+
+	let unitsData = []; // Store units data for cross-referencing
+
+	async function populateUnitSuggestions() {
+		try {
+			const units = await apiGet('/units_search.php');
+			unitsData = units; // Store for cross-referencing
+			if (els.unitNameList) els.unitNameList.innerHTML = units.map(u => `<option value="${escapeHtml(u.title)}"></option>`).join('');
+			if (els.unitCodeList) els.unitCodeList.innerHTML = units.map(u => `<option value="${escapeHtml(u.code)}"></option>`).join('');
+		} catch (_) { /* ignore */ }
+	}
+
+	function setupUnitSelection() {
+		const unitNameInput = document.getElementById('unit-name');
+		const unitCodeInput = document.getElementById('unit-code');
+
+		if (unitNameInput && unitCodeInput) {
+			// When unit name is selected, auto-fill unit code
+			unitNameInput.addEventListener('input', () => {
+				const selectedName = unitNameInput.value.trim();
+				if (selectedName && unitsData.length > 0) {
+					const matchingUnit = unitsData.find(u => u.title === selectedName);
+					if (matchingUnit) {
+						unitCodeInput.value = matchingUnit.code;
+					}
+				}
+			});
+
+			// When unit code is selected, auto-fill unit name
+			unitCodeInput.addEventListener('input', () => {
+				const selectedCode = unitCodeInput.value.trim();
+				if (selectedCode && unitsData.length > 0) {
+					const matchingUnit = unitsData.find(u => u.code === selectedCode);
+					if (matchingUnit) {
+						unitNameInput.value = matchingUnit.title;
+					}
+				}
+			});
+		}
 	}
 
 	function safeSplitCsvLine(line) {
@@ -266,41 +362,41 @@
 		e.preventDefault();
 		const name = document.getElementById('unit-name').value.trim();
 		const code = document.getElementById('unit-code').value.trim();
-		const file = document.getElementById('students-file').files[0];
-		saveUnit({ name, code });
-		if (file) {
-			const text = await file.text();
-			const parsed = parseStudentsCsv(text);
-			saveStudents(parsed);
-		} else if (getStudents().length === 0) {
-			// Add sample students for demonstration
-			const sampleStudents = [
-				{ registrationNumber: 'CS001', name: 'Alice Johnson', status: 'unmarked' },
-				{ registrationNumber: 'CS002', name: 'Bob Smith', status: 'unmarked' },
-				{ registrationNumber: 'CS003', name: 'Carol Davis', status: 'unmarked' },
-				{ registrationNumber: 'CS004', name: 'David Wilson', status: 'unmarked' },
-				{ registrationNumber: 'CS005', name: 'Emma Brown', status: 'unmarked' },
-				{ registrationNumber: 'CS006', name: 'Frank Miller', status: 'unmarked' },
-				{ registrationNumber: 'CS007', name: 'Grace Taylor', status: 'unmarked' },
-				{ registrationNumber: 'CS008', name: 'Henry Anderson', status: 'unmarked' },
-				{ registrationNumber: 'CS009', name: 'Ivy Thomas', status: 'unmarked' },
-				{ registrationNumber: 'CS010', name: 'Jack Garcia', status: 'unmarked' }
-			];
-			saveStudents(sampleStudents);
+		try {
+			const byCode = code ? await apiGet(`/unit_students.php?unit_code=${encodeURIComponent(code)}`).catch(() => null) : null;
+			const byName = byCode || (name ? await apiGet(`/unit_students.php?unit_name=${encodeURIComponent(name)}`).catch(() => null) : null);
+			if (!byName) throw new Error('Unit not found');
+			saveUnit({ name: byName.unit.title, code: byName.unit.code, id: byName.unit.id, year: byName.unit.year_of_study });
+		} catch (err) {
+			console.warn('Unit resolution failed, saving locally instead:', err);
+			saveUnit({ name, code });
 		}
+		
+		// Load students from the selected unit
+		try {
+			const unit = getUnit();
+			const resp = await apiGet(`/unit_students.php?unit_code=${encodeURIComponent(unit.code)}`);
+			const mapped = resp.students.map(s => ({ registrationNumber: s.reg_no || '', name: s.name || '', status: 'unmarked', studentId: s.id }));
+			saveStudents(mapped);
+		} catch (_) {
+			saveStudents([]);
+		}
+		
 		ensureTodaySession();
 		initDashboard();
 		show('dashboard');
 	});
 
-	// Add student functionality removed - will be replaced with API integration
-
 	if (els.studentsList) els.studentsList.addEventListener('click', (e) => {
-		const target = e.target;
-		if (!(target instanceof HTMLElement)) return;
-		const index = target.getAttribute('data-index');
-		const status = target.getAttribute('data-status');
-		if (index !== null && status) updateStatus(Number(index), status);
+		const targetEl = e.target;
+		if (!(targetEl instanceof HTMLElement)) return;
+		const button = targetEl.closest('button[data-index][data-status]');
+		if (!(button instanceof HTMLElement)) return;
+		const index = button.getAttribute('data-index');
+		const status = button.getAttribute('data-status');
+		if (index !== null && status) {
+			updateStatus(Number(index), status);
+		}
 	});
 
 	if (els.downloadBtn) els.downloadBtn.addEventListener('click', downloadTodayCsv);
@@ -312,18 +408,19 @@
 	if (els.manageUnitBtn) els.manageUnitBtn.addEventListener('click', () => show('unit'));
 	if (els.logout1) els.logout1.addEventListener('click', logout);
 	if (els.logout2) els.logout2.addEventListener('click', logout);
+	
+	// Add event listener for the new header logout button
+	const headerLogoutBtn = document.getElementById('logout-btn');
+	if (headerLogoutBtn) headerLogoutBtn.addEventListener('click', logout);
 
-	// Back button
 	const backBtn = document.getElementById('back-btn');
 	if (backBtn) backBtn.addEventListener('click', () => {
 		const auth = getAuth();
 		if (!auth.loggedIn) {
-			// not logged in: back takes you to login form
 			show('auth');
 			setTab('login');
 			return;
 		}
-		// logged in: from dashboard -> unit, from unit -> dashboard (if unit exists)
 		const unit = getUnit();
 		const dashboardVisible = !views.dashboard.classList.contains('hidden');
 		if (dashboardVisible) {
@@ -341,17 +438,43 @@
 		show('auth');
 	}
 
+	// ✅ fixed version of initDashboard
 	function initDashboard() {
 		const unit = getUnit();
 		const auth = getAuth();
 		const lecturers = getLecturers();
 		const user = lecturers.find(l => l.email === auth.email);
-		if (user) els.lecturerName.textContent = user.name;
-		els.unitTitle.textContent = `${unit?.code || ''} — ${unit?.name || ''}`;
-		const d = new Date();
-		els.date.textContent = d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+		
+		// Update header elements
+		const lecturerNameEl = document.getElementById('lecturer-name');
+		const unitTitleEl = document.getElementById('unit-title');
+		const dateEl = document.getElementById('header-date');
+		
+		if (user && lecturerNameEl) lecturerNameEl.textContent = user.name;
+		if (unitTitleEl) unitTitleEl.textContent = `${unit?.code || ''} — ${unit?.name || ''}`;
+		if (dateEl) {
+			const d = new Date();
+			dateEl.textContent = d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+		}
+		
 		ensureTodaySession();
-		renderStudents();
+
+		// Always fetch all students from backend
+		apiGet(`/students.php`).then(resp => {
+			// Handle both array or { students: [...] }
+			const studentsArray = Array.isArray(resp) ? resp : resp.students || [];
+			const mapped = studentsArray.map(s => ({
+				studentId: s.id,
+				name: s.name || '',
+				registrationNumber: s.reg_no || '', // map DB column
+				status: 'unmarked'
+			}));
+			saveStudents(mapped);
+			renderStudents();
+		}).catch(err => {
+			console.warn('Could not load students from API, falling back:', err);
+			renderStudents();
+		});
 	}
 
 	// boot
@@ -361,5 +484,7 @@
 		if (!getUnit()) { show('unit'); return; }
 		initDashboard();
 		show('dashboard');
+		populateUnitSuggestions();
+		setupUnitSelection();
 	})();
 })();

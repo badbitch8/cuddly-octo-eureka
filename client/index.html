@@ -7,14 +7,39 @@
 	<link rel="stylesheet" href="index.css" >
 </head>
 <body>
-	<div id="app">
-		<div class="topbar">
-			<button id="back-btn" class="ghost hidden">← Back</button>
+	<header class="main-header">
+		<div class="header-content">
+			<div class="header-back">
+				<button id="back-btn" class="ghost hidden">←</button>
+			</div>
+			<div class="header-left">
+				<div class="logo">
+					<h1>📚 Attendance Manager</h1>
+				</div>
+			</div>
+			<div class="header-center">
+				<div class="header-info">
+					<h2 id="header-title" class="hidden">Welcome, <span id="lecturer-name"></span></h2>
+					<h2 id="header-unit-title" class="hidden"><span id="unit-title"></span></h2>
+					<p id="header-date" class="muted hidden"></p>
+				</div>
+			</div>
+			<div class="header-right">
+				<div id="header-actions" class="hidden">
+					<button id="download-btn" class="secondary">Download CSV</button>
+					<button id="reset-btn" class="ghost">Reset</button>
+					<button id="manage-unit-btn" class="ghost">Manage unit</button>
+				</div>
+				<button id="logout-btn" class="ghost hidden">Log out</button>
+			</div>
 		</div>
+	</header>
+
+	<main id="app">
 		<!-- Auth Views -->
 		<section id="auth-view" class="view">
 			<div class="card">
-				<h1>Attendance Manager</h1>
+				<h2>Welcome Back</h2>
 
 				<form id="login-form" class="form">
 					<label>Email
@@ -50,60 +75,48 @@
 
 		<!-- Unit Setup View -->
 		<section id="unit-view" class="view hidden">
-			<header class="toolbar">
-				<div class="left">
-					<h2>Welcome, <span id="lecturer-name"></span></h2>
-				</div>
-				<div class="right">
-					<button id="logout-btn" class="ghost">Log out</button>
-				</div>
-			</header>
 			<div class="card">
 				<h3>Set up your unit</h3>
 				<form id="unit-form" class="form row">
 					<label>Unit name
-						<input type="text" id="unit-name" placeholder="e.g., Intro to CS" required />
+						<input list="unit-name-list" type="text" id="unit-name" placeholder="e.g., Intro to CS" required />
+						<datalist id="unit-name-list"></datalist>
 					</label>
 					<label>Unit code
-						<input type="text" id="unit-code" placeholder="e.g., CSC101" required />
-					</label>
-					<label>Students CSV
-						<input type="file" id="students-file" accept=".csv" />
-						<small>CSV with columns: registrationNumber,name</small>
+						<input list="unit-code-list" type="text" id="unit-code" placeholder="e.g., CSC101" required />
+						<datalist id="unit-code-list"></datalist>
 					</label>
 					<button type="submit" class="primary">Save unit</button>
 				</form>
-				<p class="muted">Or start with an empty list and add students later.</p>
 			</div>
 		</section>
 
 		<!-- Dashboard View -->
 		<section id="dashboard-view" class="view hidden">
-			<header class="toolbar">
-				<div class="left">
-					<h2 id="unit-title"></h2>
-					<p class="muted" id="today-date"></p>
-				</div>
-				<div class="right">
-					<button id="download-btn" class="secondary">Download Present Students CSV</button>
-					<button id="reset-btn" class="ghost">Reset for next session</button>
-					<button id="manage-unit-btn" class="ghost">Manage unit</button>
-					<button id="logout-btn-2" class="ghost">Log out</button>
-				</div>
-			</header>
 			<div class="card">
 				<div class="list-head">
 					<div>Name</div>
-					<div>Reg. No</div>
+					<div>Reg_No</div>
 					<div>Status</div>
 				</div>
 				<div id="students-list" class="list"></div>
-				<div class="list-foot">
-					<p class="muted">Students loaded from demo data. API integration coming soon.</p>
-				</div>
 			</div>
 		</section>
-	</div>
+	</main>
+
+	<footer class="main-footer">
+		<div class="footer-content">
+			<div class="footer-info">
+				<p>&copy; 2024 Attendance Manager. All rights reserved.</p>
+				<p>Streamline your classroom attendance tracking</p>
+			</div>
+			<div class="footer-links">
+				<a href="#" class="footer-link">Help</a>
+				<a href="#" class="footer-link">Privacy</a>
+				<a href="#" class="footer-link">Terms</a>
+			</div>
+		</div>
+	</footer>
 
 	<script src="index.js"></script>
 </body>

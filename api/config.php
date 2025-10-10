@@ -21,13 +21,15 @@ function sendCorsHeaders(): void {
 }
 
 // Handle preflight
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 	sendCorsHeaders();
 	http_response_code(204);
 	exit;
 }
 
-sendCorsHeaders();
+if (isset($_SERVER['REQUEST_METHOD'])) {
+	sendCorsHeaders();
+}
 ?>
 
 

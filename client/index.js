@@ -1,10 +1,14 @@
 (function () {
-	const API_BASE = storageGetEnv('API_BASE', 'http://localhost:8000/api');
+	const API_BASE = storageGetEnv('API_BASE', 'http://localhost:8080/api');
 
 	const views = {
 		auth: document.getElementById('auth-view'),
+		campus: document.getElementById('campus-view'),
 		unit: document.getElementById('unit-view'),
-		dashboard: document.getElementById('dashboard-view')
+		facultyDashboard: document.getElementById('faculty-dashboard'),
+		studentDashboard: document.getElementById('student-dashboard'),
+		adminPanel: document.getElementById('admin-panel'),
+		dashboard: document.getElementById('dashboard-view') // legacy
 	};
 
 	const links = {
@@ -48,11 +52,8 @@
 	};
 
 	// Models
-	function getAuth() { return storage.get('auth', { loggedIn: false }); }
+	function getAuth() { return storage.get('auth', { loggedIn: false, user: null, role: '', token: '' }); }
 	function setAuth(v) { storage.set('auth', v); }
-
-	function getLecturers() { return storage.get('lecturers', []); }
-	function saveLecturers(list) { storage.set('lecturers', list); }
 
 	function getUnit() { return storage.get('unit', null); }
 	function saveUnit(unit) { storage.set('unit', unit); }
@@ -76,9 +77,12 @@
 	}
 
 	async function apiJson(path, method, body) {
+		const auth = getAuth();
+		const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+		if (auth.token) headers['Authorization'] = `Bearer ${auth.token}`;
 		const res = await fetch(`${API_BASE}${path}`, {
 			method,
-			headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+			headers,
 			body: JSON.stringify(body)
 		});
 		if (!res.ok) throw new Error(`${method} ${path} failed: ${res.status}`);
@@ -106,10 +110,18 @@
 		Object.values(views).forEach(v => v.classList.add('hidden'));
 		views[view].classList.remove('hidden');
 		updateHeader(view);
-		
-		// Setup unit selection when unit view is shown
+
+		// Setup specific views
 		if (view === 'unit') {
 			setupUnitSelection();
+		} else if (view === 'campus') {
+			init3DScene();
+		} else if (view === 'facultyDashboard') {
+			loadFacultyDashboard();
+		} else if (view === 'studentDashboard') {
+			loadStudentDashboard();
+		} else if (view === 'adminPanel') {
+			loadAdminPanel();
 		}
 	}
 
@@ -120,7 +132,7 @@
 		const headerDate = document.getElementById('header-date');
 		const headerActions = document.getElementById('header-actions');
 		const logoutBtn = document.getElementById('logout-btn');
-		
+
 		// Hide all header elements first
 		if (backBtn) backBtn.classList.add('hidden');
 		if (headerTitle) headerTitle.classList.add('hidden');
@@ -128,22 +140,17 @@
 		if (headerDate) headerDate.classList.add('hidden');
 		if (headerActions) headerActions.classList.add('hidden');
 		if (logoutBtn) logoutBtn.classList.add('hidden');
-		
-		if (view === 'auth') {
-			// Auth view - minimal header
-			if (backBtn) backBtn.classList.add('hidden');
-		} else if (view === 'unit') {
-			// Unit view - show back button, welcome message, and logout
-			if (backBtn) backBtn.classList.remove('hidden');
+
+		const auth = getAuth();
+		if (auth.loggedIn) {
 			if (headerTitle) headerTitle.classList.remove('hidden');
 			if (logoutBtn) logoutBtn.classList.remove('hidden');
-		} else if (view === 'dashboard') {
-			// Dashboard view - show back button, unit title, date, actions, and logout
 			if (backBtn) backBtn.classList.remove('hidden');
+		}
+		if (view === 'unit' || view === 'facultyDashboard') {
 			if (headerUnitTitle) headerUnitTitle.classList.remove('hidden');
 			if (headerDate) headerDate.classList.remove('hidden');
 			if (headerActions) headerActions.classList.remove('hidden');
-			if (logoutBtn) logoutBtn.classList.remove('hidden');
 		}
 	}
 
@@ -306,56 +313,50 @@
 	if (links.toLogin) links.toLogin.addEventListener('click', (e) => { e.preventDefault(); setTab('login'); });
 	if (links.forgot) links.forgot.addEventListener('click', (e) => { e.preventDefault(); alert('Password reset is not set up in this demo.'); });
 
-	if (forms.signup) forms.signup.addEventListener('submit', (e) => {
+	if (forms.signup) forms.signup.addEventListener('submit', async (e) => {
 		e.preventDefault();
 		const name = document.getElementById('signup-name').value.trim();
 		const email = document.getElementById('signup-email').value.trim().toLowerCase();
 		const password = document.getElementById('signup-password').value;
-		
+		const role = document.getElementById('signup-role').value;
+
 		if (!name || !email || !password) {
 			alert('Please fill in all fields');
 			return;
 		}
-		
-		const lecturers = getLecturers();
-		if (lecturers.some(l => l.email === email)) {
-			alert('An account with this email already exists. Please log in instead.');
+
+		try {
+			const data = { action: 'create', name, email, password, role };
+			if (role === 'student') {
+				data.reg_no = prompt('Enter registration number:') || '';
+				data.year_of_study = 1;
+			}
+			const resp = await apiJson('/students.php', 'POST', data);
+			alert('Account created successfully!');
 			setTab('login');
-			return;
-		}
-		
-		lecturers.push({ name, email, password });
-		saveLecturers(lecturers);
-		setAuth({ loggedIn: true, email });
-		els.lecturerName.textContent = name;
-		if (getUnit()) {
-			initDashboard();
-			show('dashboard');
-		} else {
-			show('unit');
+		} catch (err) {
+			alert('Signup failed: ' + err.message);
 		}
 	});
 
-	if (forms.login) forms.login.addEventListener('submit', (e) => {
+	if (forms.login) forms.login.addEventListener('submit', async (e) => {
 		e.preventDefault();
 		const email = document.getElementById('login-email').value.trim().toLowerCase();
 		const password = document.getElementById('login-password').value;
-		
+
 		if (!email || !password) {
 			alert('Please enter both email and password');
 			return;
 		}
-		
-		const lecturers = getLecturers();
-		const user = lecturers.find(l => l.email === email && l.password === password);
-		if (!user) { 
-			alert('Invalid email or password. Please check your credentials and try again.');
-			return; 
+
+		try {
+			const resp = await apiJson('/students.php', 'POST', { action: 'login', email, password });
+			setAuth({ loggedIn: true, user: resp.user, role: resp.user.role, token: resp.token });
+			els.lecturerName.textContent = resp.user.name;
+			show('campus'); // Go to 3D campus after login
+		} catch (err) {
+			alert('Login failed: ' + err.message);
 		}
-		
-		setAuth({ loggedIn: true, email });
-		els.lecturerName.textContent = user.name;
-		if (getUnit()) { initDashboard(); show('dashboard'); } else { show('unit'); }
 	});
 
 	if (forms.unit) forms.unit.addEventListener('submit', async (e) => {
@@ -477,14 +478,163 @@
 		});
 	}
 
+	// 3D Scene variables
+	let scene, camera, renderer, raycaster, mouse;
+	let buildings = [];
+
+	function init3DScene() {
+		const canvas = document.getElementById('3d-canvas');
+		if (!canvas) return;
+
+		// Scene setup
+		scene = new THREE.Scene();
+		scene.background = new THREE.Color(0x87CEEB); // Sky blue
+
+		// Camera
+		camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+		camera.position.set(0, 5, 10);
+
+		// Renderer
+		renderer = new THREE.WebGLRenderer({ canvas });
+		renderer.setSize(window.innerWidth, window.innerHeight);
+
+		// Controls
+		const controls = new THREE.OrbitControls(camera, canvas);
+		controls.enableDamping = true;
+		controls.dampingFactor = 0.05;
+		controls.screenSpacePanning = false;
+		controls.minDistance = 5;
+		controls.maxDistance = 50;
+		controls.maxPolarAngle = Math.PI / 2;
+
+		// Ground
+		const groundGeometry = new THREE.PlaneGeometry(50, 50);
+		const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+		const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+		ground.rotation.x = -Math.PI / 2;
+		ground.position.y = -1;
+		scene.add(ground);
+
+		// Buildings
+		const buildingData = [
+			{ name: 'admin', color: 0x000080, pos: [-5, 0, 0], size: [2, 3, 2] }, // Blue admin
+			{ name: 'faculty', color: 0x008000, pos: [0, 0, 0], size: [3, 4, 3] }, // Green faculty
+			{ name: 'student', color: 0xFFFF00, pos: [5, 0, 0], size: [2, 2, 2] } // Yellow student
+		];
+
+		buildingData.forEach(data => {
+			const geometry = new THREE.BoxGeometry(...data.size);
+			const material = new THREE.MeshLambertMaterial({ color: data.color });
+			const building = new THREE.Mesh(geometry, material);
+			building.position.set(...data.pos);
+			building.userData = { name: data.name };
+			buildings.push(building);
+			scene.add(building);
+		});
+
+		// Lights
+		const ambientLight = new THREE.AmbientLight(0x404040);
+		scene.add(ambientLight);
+		const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+		directionalLight.position.set(10, 10, 5);
+		scene.add(directionalLight);
+
+		// Raycaster for clicks
+		raycaster = new THREE.Raycaster();
+		mouse = new THREE.Vector2();
+
+		canvas.addEventListener('click', onCanvasClick);
+
+		// Animate
+		function animate() {
+			requestAnimationFrame(animate);
+			controls.update();
+			renderer.render(scene, camera);
+		}
+		animate();
+	}
+
+	function onCanvasClick(event) {
+		const canvas = document.getElementById('3d-canvas');
+		const rect = canvas.getBoundingClientRect();
+		mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+		mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+		raycaster.setFromCamera(mouse, camera);
+		const intersects = raycaster.intersectObjects(buildings);
+
+		if (intersects.length > 0) {
+			const building = intersects[0].object;
+			const auth = getAuth();
+			if (building.userData.name === 'faculty' && auth.role === 'faculty') {
+				show('unit'); // Select course first
+			} else if (building.userData.name === 'student' && auth.role === 'student') {
+				show('studentDashboard');
+			} else if (building.userData.name === 'admin' && auth.role === 'admin') {
+				show('adminPanel');
+			} else {
+				alert('Access denied for your role.');
+			}
+		}
+	}
+
+	function loadFacultyDashboard() {
+		const unit = getUnit();
+		if (!unit) return;
+		document.getElementById('faculty-course-title').textContent = `Mark Attendance for ${unit.title}`;
+		// Load students for course
+		apiGet(`/students.php?course_id=${unit.id}`).then(resp => {
+			const list = document.getElementById('faculty-students-list');
+			list.innerHTML = '';
+			resp.forEach(student => {
+				const row = document.createElement('div');
+				row.className = 'list-item';
+				row.innerHTML = `
+					<div>${student.name}</div>
+					<div>${student.reg_no}</div>
+					<div class="status-group">
+						<button class="status-present" data-enrollment="${student.enrollment_id}">Present</button>
+						<button class="status-absent" data-enrollment="${student.enrollment_id}">Absent</button>
+					</div>
+				`;
+				list.appendChild(row);
+			});
+		}).catch(err => console.error('Load students failed:', err));
+	}
+
+	function loadStudentDashboard() {
+		// Load own attendance
+		apiGet('/attendance.php').then(resp => {
+			const list = document.getElementById('student-attendance-list');
+			list.innerHTML = resp.map(a => `<div>${a.date}: ${a.status} - ${a.title}</div>`).join('');
+			// Chart.js pie for status counts
+			const ctx = document.getElementById('student-chart').getContext('2d');
+			const counts = resp.reduce((acc, a) => { acc[a.status] = (acc[a.status] || 0) + 1; return acc; }, {});
+			new Chart(ctx, {
+				type: 'pie',
+				data: {
+					labels: Object.keys(counts),
+					datasets: [{ data: Object.values(counts), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'] }]
+				}
+			});
+		}).catch(err => console.error('Load attendance failed:', err));
+	}
+
+	function loadAdminPanel() {
+		// Load courses for select
+		apiGet('/units.php').then(resp => {
+			const select = document.getElementById('admin-course-select');
+			select.innerHTML = '<option value="">All Courses</option>';
+			resp.forEach(course => {
+				select.innerHTML += `<option value="${course.id}">${course.code} - ${course.title}</option>`;
+			});
+		}).catch(err => console.error('Load courses failed:', err));
+	}
+
 	// boot
 	(function start() {
 		const auth = getAuth();
 		if (!auth.loggedIn) { show('auth'); setTab('login'); return; }
-		if (!getUnit()) { show('unit'); return; }
-		initDashboard();
-		show('dashboard');
-		populateUnitSuggestions();
-		setupUnitSelection();
+		show('campus'); // Start with 3D campus
 	})();
 })();

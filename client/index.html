@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-	<title>Attendance Manager</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>MUT  Attendance Manager</title>
 	<link rel="stylesheet" href="index.css" >
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 	<header class="main-header">
@@ -13,9 +14,11 @@
 				<button id="back-btn" class="ghost hidden">←</button>
 			</div>
 			<div class="header-left">
-				<div class="logo">
-					<h1>📚 Attendance Manager</h1>
-				</div>
+		<div class="logo">
+			<img src="https://www.mut.ac.ke/wp-content/uploads/2020/07/MUT-Logo.png" alt="MUT Logo" class="mut-logo" style="height: 40px;">
+			<h1>📚 MUT Attendance Manager</h1>
+
+		</div>
 			</div>
 			<div class="header-center">
 				<div class="header-info">
@@ -39,14 +42,15 @@
 		<!-- Auth Views -->
 		<section id="auth-view" class="view">
 			<div class="card">
-				<h2>Welcome Back</h2>
+				<h2>Welcome to MUT Attendance</h2>
+				<p>Interactive  Campus Management</p>
 
 				<form id="login-form" class="form">
 					<label>Email
-						<input type="email" id="login-email" required />
+						<input type="email" id="login-email" required autocomplete="email" />
 					</label>
 					<label>Password
-						<input type="password" id="login-password" required />
+						<input type="password" id="login-password" required autocomplete="current-password" />
 					</label>
 					<button type="submit" class="primary">Log in</button>
 					<div class="links-row">
@@ -60,10 +64,17 @@
 						<input type="text" id="signup-name" required />
 					</label>
 					<label>Email
-						<input type="email" id="signup-email" required />
+						<input type="email" id="signup-email" required autocomplete="email" />
 					</label>
 					<label>Password
-						<input type="password" id="signup-password" required minlength="6" />
+						<input type="password" id="signup-password" required minlength="6" autocomplete="new-password" />
+					</label>
+					<label>Role
+						<select id="signup-role" required>
+							<option value="student">Student</option>
+							<option value="faculty">Faculty</option>
+							<option value="admin">Admin</option>
+						</select>
 					</label>
 					<button type="submit" class="primary">Create account</button>
 					<div class="links-row">
@@ -73,25 +84,70 @@
 			</div>
 		</section>
 
-		<!-- Unit Setup View -->
+		<!-- 3D Campus View -->
+		<section id="campus-view" class="view hidden">
+			<canvas id="3d-canvas"></canvas>
+			<div id="campus-ui" class="campus-overlay hidden">
+				<h3 id="campus-title">MUT Campus</h3>
+				<p>Click on buildings to access features</p>
+			</div>
+		</section>
+
+		<!-- Unit/Course Setup View -->
 		<section id="unit-view" class="view hidden">
 			<div class="card">
-				<h3>Set up your unit</h3>
+				<h3>Select Course</h3>
 				<form id="unit-form" class="form row">
-					<label>Unit name
-						<input list="unit-name-list" type="text" id="unit-name" placeholder="e.g., Intro to CS" required />
+					<label>Course name
+						<input list="unit-name-list" type="text" id="unit-name" placeholder="e.g., Introduction to Computing" required />
 						<datalist id="unit-name-list"></datalist>
 					</label>
-					<label>Unit code
-						<input list="unit-code-list" type="text" id="unit-code" placeholder="e.g., CSC101" required />
+					<label>Course code
+						<input list="unit-code-list" type="text" id="unit-code" placeholder="e.g., BIT101" required />
 						<datalist id="unit-code-list"></datalist>
 					</label>
-					<button type="submit" class="primary">Save unit</button>
+					<button type="submit" class="primary">Load Course</button>
 				</form>
 			</div>
 		</section>
 
-		<!-- Dashboard View -->
+		<!-- Faculty Dashboard (Attendance Marking) -->
+		<section id="faculty-dashboard" class="view hidden">
+			<div class="card">
+				<h3 id="faculty-course-title">Mark Attendance</h3>
+				<div class="list-head">
+					<div>Name</div>
+					<div>Reg No</div>
+					<div>Status</div>
+				</div>
+				<div id="faculty-students-list" class="list"></div>
+				<button id="faculty-download" class="primary">Generate Report</button>
+			</div>
+		</section>
+
+		<!-- Student Dashboard -->
+		<section id="student-dashboard" class="view hidden">
+			<div class="card">
+				<h3>Your Attendance</h3>
+				<div id="student-attendance-list"></div>
+				<canvas id="student-chart" width="400" height="200"></canvas>
+			</div>
+		</section>
+
+		<!-- Admin Panel -->
+		<section id="admin-panel" class="view hidden">
+			<div class="card">
+				<h3>Admin Reports</h3>
+				<select id="admin-course-select">
+					<option value="">All Courses</option>
+				</select>
+				<button id="admin-generate-report" class="primary">Generate Report</button>
+				<div id="admin-report"></div>
+				<canvas id="admin-chart" width="400" height="200"></canvas>
+			</div>
+		</section>
+
+		<!-- Dashboard View (legacy, for unit students) -->
 		<section id="dashboard-view" class="view hidden">
 			<div class="card">
 				<div class="list-head">
@@ -106,10 +162,10 @@
 
 	<footer class="main-footer">
 		<div class="footer-content">
-			<div class="footer-info">
-				<p>&copy; 2024 Attendance Manager. All rights reserved.</p>
-				<p>Streamline your classroom attendance tracking</p>
-			</div>
+		<div class="footer-info">
+			<p>&copy; 2024 Murang'a University of Technology. All rights reserved.</p>
+			<p>Interactive Attendance Management System</p>
+		</div>
 			<div class="footer-links">
 				<a href="#" class="footer-link">Help</a>
 				<a href="#" class="footer-link">Privacy</a>
@@ -118,6 +174,7 @@
 		</div>
 	</footer>
 
-	<script src="index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="index.js"></script>
 </body>
 </html>

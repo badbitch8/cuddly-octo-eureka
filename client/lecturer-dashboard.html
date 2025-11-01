@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lecturer Dashboard — Attendance</title>
+
+  <!-- Bootstrap + icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg-1: #071525;
+      --bg-2: #08182f;
+      --glass: rgba(255,255,255,0.04);
+      --glass-2: rgba(255,255,255,0.02);
+      --accent: linear-gradient(90deg,#7b61ff,#4dd0e1);
+      --muted: #9fb0c8;
+      --card-border: rgba(255,255,255,0.06);
+    }
+
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:"Poppins",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+      background: radial-gradient(1000px 600px at 10% 10%, rgba(123,97,255,0.10), transparent),
+                  radial-gradient(800px 500px at 90% 90%, rgba(77,208,225,0.06), transparent),
+                  linear-gradient(180deg,var(--bg-1),var(--bg-2));
+      color:#eaf4ff;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    .app-shell{display:flex;gap:1rem;min-height:100vh}
+    /* Sidebar */
+    .sidebar{
+      width:240px;
+      min-height:100%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid var(--card-border);
+      border-radius:12px;
+      padding:1rem;
+      box-shadow: 0 6px 30px rgba(3,8,20,0.5), inset 0 1px 0 rgba(255,255,255,0.02);
+      backdrop-filter: blur(8px);
+    }
+    .brand{
+      display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;
+    }
+    .brand .logo{
+      width:44px;height:44px;border-radius:10px; background:var(--accent); display:flex;align-items:center;justify-content:center;
+      box-shadow: 0 6px 18px rgba(75,29,200,0.18);
+      font-weight:700;color:#fff;
+    }
+    .sidebar .small-muted{color:var(--muted);font-size:.85rem}
+    .nav-item{
+      display:flex;align-items:center;gap:.55rem;padding:.5rem .6rem;border-radius:.6rem;margin-top:.35rem;
+      color:inherit;text-decoration:none;cursor:pointer;transition:all .18s ease;
+    }
+    .nav-item:hover{transform:translateX(6px);background:linear-gradient(90deg, rgba(255,255,255,0.02), transparent)}
+    .nav-item.active{background:linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));box-shadow: inset 0 1px 0 rgba(255,255,255,0.02)}
+    .nav-item .bi{font-size:1.15rem;color:rgba(255,255,255,0.9)}
+
+    .divider{height:1px;background:rgba(255,255,255,0.06);margin:.6rem 0}
+
+    /* Main */
+    .main{
+      flex:1; display:flex;flex-direction:column;gap:1rem;
+    }
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;gap:1rem;
+    }
+    .searchbox{min-width:480px;max-width:780px;}
+    .card-glass{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid var(--card-border);
+      border-radius:12px;
+      padding:1rem;
+      box-shadow: 0 12px 30px rgba(3,8,20,0.45);
+      backdrop-filter: blur(8px);
+    }
+
+    /* Attendance UI */
+    .students-panel{
+      max-height:680px;overflow:auto;padding:.5rem;border-radius:10px;
+    }
+    .student-entry{
+      display:flex;align-items:center;justify-content:space-between;padding:.55rem;border-radius:8px;transition:all .14s;
+      border:1px solid transparent;
+    }
+    .student-entry:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(2,6,20,0.4);border-color:rgba(255,255,255,0.02)}
+    .student-meta{display:flex;align-items:center;gap:.8rem}
+    .avatar{
+      width:44px;height:44px;border-radius:10px;background:linear-gradient(180deg,#2b6be6,#7b61ff);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;
+      box-shadow:0 6px 18px rgba(75,29,200,0.14);
+      flex-shrink:0;
+    }
+    .student-name{font-weight:600}
+    .student-id{color:var(--muted);font-size:.85rem}
+
+    .status-chip{
+      padding:.28rem .6rem;border-radius:999px;font-weight:600;min-width:86px;text-align:center;
+    }
+    .chip-present{background:linear-gradient(90deg,#12b886,#34d399);color:#042018}
+    .chip-absent{background:linear-gradient(90deg,#ff6b6b,#ef4444);color:#2a0404}
+
+    /* header row */
+    .students-header{
+      display:flex;align-items:center;justify-content:space-between;padding:.4rem .55rem;margin-bottom:.35rem;border-bottom:1px dashed rgba(255,255,255,0.08);color:var(--muted);font-weight:600;font-size:.9rem
+    }
+    .students-header .col-name{flex:1;min-width:220px}
+    .students-header .col-reg{width:180px}
+    .students-header .col-year{width:100px}
+    .students-header .col-program{width:180px}
+    .students-header .col-status{width:110px;text-align:right}
+
+    /* student search input text color */
+    #studentSearch{ color:#ffffff; }
+
+    /* summary area */
+    .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:.6rem}
+    .stat{
+      padding:.7rem;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.012), transparent);border:1px solid rgba(255,255,255,0.02);
+    }
+    .stat .label{color:var(--muted);font-size:.9rem}
+    .stat .value{font-weight:700;font-size:1.3rem;margin-top:.2rem}
+
+    /* buttons */
+    .btn-ghost{
+      background:transparent;border:1px solid rgba(255,255,255,0.04);color:inherit;border-radius:8px;padding:.45rem .7rem;
+    }
+
+    /* responsive */
+    @media (max-width:1000px){
+      .sidebar{display:none}
+      .searchbox{min-width:160px}
+    }
+    /* footer (sidebar quick tip restored) */
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Sidebar">
+      <div class="brand">
+        <div class="logo">AT</div>
+        <div>
+          <div style="font-weight:700">Attendance</div>
+          <div class="small-muted">Lecturer dashboard</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <nav>
+        <div id="navAttendance" class="nav-item active" data-target="attendance" role="button" tabindex="0" aria-expanded="false">
+          <i class="bi bi-check2-square"></i> Attendance <i class="bi bi-caret-down-fill" style="margin-left:auto;font-size:.9rem;opacity:.8"></i>
+        </div>
+        <div id="attendanceMenu" class="small-muted" style="display:none;margin-left:2rem;margin-top:.25rem">
+          <div class="nav-item" data-att="class" role="button" tabindex="0"><i class="bi bi-people"></i> Class</div>
+          <div id="picker-class" class="card-glass" style="display:none;padding:.5rem;margin:.25rem 0 .5rem 0">
+            <label for="unitSearchClass" class="small-muted" style="display:block;font-size:.8rem">Select unit</label>
+            <input id="unitSearchClass" list="unitsDataClass" class="form-control form-control-sm" placeholder="Type to search units">
+            <datalist id="unitsDataClass"></datalist>
+          </div>
+          <div class="nav-item" data-att="cat" role="button" tabindex="0"><i class="bi bi-graph-up"></i> CAT</div>
+          <div id="picker-cat" class="card-glass" style="display:none;padding:.5rem;margin:.25rem 0 .5rem 0">
+            <label for="unitSearchCat" class="small-muted" style="display:block;font-size:.8rem">Select unit</label>
+            <input id="unitSearchCat" list="unitsDataCat" class="form-control form-control-sm" placeholder="Type to search units">
+            <datalist id="unitsDataCat"></datalist>
+          </div>
+          <div class="nav-item" data-att="exam" role="button" tabindex="0"><i class="bi bi-journal-check"></i> Exam</div>
+          <div id="picker-exam" class="card-glass" style="display:none;padding:.5rem;margin:.25rem 0 .5rem 0">
+            <label for="unitSearchExam" class="small-muted" style="display:block;font-size:.8rem">Select unit</label>
+            <input id="unitSearchExam" list="unitsDataExam" class="form-control form-control-sm" placeholder="Type to search units">
+            <datalist id="unitsDataExam"></datalist>
+          </div>
+          <div class="nav-item" data-att="assignment" role="button" tabindex="0"><i class="bi bi-list-check"></i> Assignment</div>
+          <div id="picker-assignment" class="card-glass" style="display:none;padding:.5rem;margin:.25rem 0 .5rem 0">
+            <label for="unitSearchAssignment" class="small-muted" style="display:block;font-size:.8rem">Select unit</label>
+            <input id="unitSearchAssignment" list="unitsDataAssignment" class="form-control form-control-sm" placeholder="Type to search units">
+            <datalist id="unitsDataAssignment"></datalist>
+          </div>
+        </div>
+        <div class="nav-item" data-target="reports" role="button" tabindex="0"><i class="bi bi-file-earmark-text"></i> Reports</div>
+        <div class="nav-item" data-target="evaluation" role="button" tabindex="0"><i class="bi bi-bar-chart-line"></i> Student Evaluation</div>
+        <div class="nav-item" data-target="settings" role="button" tabindex="0"><i class="bi bi-gear"></i> Settings</div>
+      </nav>
+
+      <div class="divider"></div>
+
+      <div>
+        <div class="small-muted">Course</div>
+        <div id="courseLabel" style="font-weight:700">(none selected)</div>
+      </div>
+
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <div style="font-size:1.2rem;font-weight:700">Attendance</div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+          <div>
+            <label for="studentSearch" class="small-muted" style="display:block;font-size:.8rem">Student</label>
+            <input id="studentSearch" list="studentsData" class="form-control form-control-sm" placeholder="Search student name or Reg No (live from MySQL)" aria-label="Search students">
+          </div>
+
+          <div>
+            <label for="unitSearch" class="small-muted" style="display:block;font-size:.8rem">Unit</label>
+            <input id="unitSearch" list="unitsData" class="form-control form-control-sm" placeholder="Type to search units" aria-label="Search unit by code or title">
+            <datalist id="unitsData"></datalist>
+          </div>
+
+          <div>
+            <label for="attDate" class="small-muted" style="display:block;font-size:.8rem">Date</label>
+            <input id="attDate" type="date" class="form-control form-control-sm" aria-label="Attendance date">
+          </div>
+
+          <div>
+            <button id="markAllPresent" class="btn btn-sm btn-success" title="Mark all present"><i class="bi bi-check-circle"></i></button>
+            <button id="markAllAbsent" class="btn btn-sm btn-outline-light" title="Mark all absent"><i class="bi bi-x-circle"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <section id="view-attendance" class="card-glass" style="display:none">
+        <div class="students-panel">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="small-muted">Students</div>
+            <div class="small-muted" id="loadingState">Loading…</div>
+          </div>
+
+          <div class="students-header" role="group" aria-label="Attendance columns">
+            <div class="col-name">Name</div>
+            <div class="col-reg">Reg No / ID</div>
+            <div class="col-year">Year</div>
+            <div class="col-program">Program</div>
+            <div class="col-status">Status</div>
+          </div>
+
+          <div id="studentsList" role="list" aria-label="Students list" style="display:grid;gap:.45rem">
+            <!-- JS populated -->
+          </div>
+          
+          <!-- Save Button Below Attendance -->
+          <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.06);">
+            <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:.5rem">
+              <button id="saveAttendanceBtn" class="btn btn-success btn-lg">
+                <i class="bi bi-check-circle"></i> Save Attendance
+              </button>
+              <button id="resetAttendanceBtn" class="btn btn-outline-light">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset
+              </button>
+              <div id="saveMsgMain" class="small-muted" style="margin-left:1rem;"></div>
+            </div>
+            <div class="small-muted">
+              <i class="bi bi-info-circle"></i> Click "Save Attendance" to store today's attendance records to the database.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Attendance Statistics Panel (Separate) -->
+      <section id="attendance-stats" class="card-glass" style="display:block">
+        <div class="summary-grid" aria-hidden="false">
+          <div class="stat">
+            <div class="label">Total</div>
+            <div class="value" id="statTotal">0</div>
+          </div>
+          <div class="stat">
+            <div class="label">Present</div>
+            <div class="value text-success" id="statPresent">0</div>
+          </div>
+          <div class="stat">
+            <div class="label">Absent</div>
+            <div class="value text-danger" id="statAbsent">0</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:.6rem">
+          <button id="saveAttendance" class="btn btn-primary btn-lg">Save attendance</button>
+          <button id="resetAttendance" class="btn btn-ghost">Reset</button>
+          <div id="saveMsg" class="small-muted"></div>
+        </div>
+
+        <div>
+          <h6 style="margin-bottom:.4rem">Selected snapshot</h6>
+          <div id="summary" class="small-muted">No changes yet.</div>
+        </div>
+      </section>
+
+      <!-- placeholder views -->
+      <section id="view-reports" class="card-glass" style="display:none">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h5>Attendance Reports</h5>
+          <button class="btn btn-outline-light btn-sm" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise"></i> New Attendance
+          </button>
+        </div>
+        <div id="reportsContent">
+          <p class="small-muted">No attendance records saved yet.</p>
+        </div>
+      </section>
+
+      <section id="view-evaluation" class="card-glass" style="display:none">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h5>Student Evaluation</h5>
+          <button class="btn btn-outline-light btn-sm" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+          </button>
+        </div>
+        <div id="evaluationContent">
+          <p class="small-muted">Select a unit to view student evaluations.</p>
+        </div>
+      </section>
+
+      <section id="view-settings" class="card-glass" style="display:none">
+        <h5>Settings</h5>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Keep endpoints same as before
+    const apiStudents = '../api/students.php';
+    const apiSave = '../api/attendance_save.php';
+    const apiFetch = '../api/attendance_fetch.php';
+    const apiUnits = '../api/units.php';
+    const apiUnitStudents = '../api/unit_students.php';
+    const apiEvaluation = '../api/student_evaluation.php';
+
+    const studentsList = document.getElementById('studentsList');
+    const attDate = document.getElementById('attDate');
+    const studentSearch = document.getElementById('studentSearch');
+    const summary = document.getElementById('summary');
+    const studentsDataList = document.createElement('datalist');
+    studentsDataList.id = 'studentsData';
+    document.body.appendChild(studentsDataList);
+    const saveMsg = document.getElementById('saveMsg');
+    const markAllPresent = document.getElementById('markAllPresent');
+    const markAllAbsent = document.getElementById('markAllAbsent');
+    const saveAttendance = document.getElementById('saveAttendance');
+    const resetAttendance = document.getElementById('resetAttendance');
+    const statTotal = document.getElementById('statTotal');
+    const statPresent = document.getElementById('statPresent');
+    const statAbsent = document.getElementById('statAbsent');
+    const loadingState = document.getElementById('loadingState');
+    const unitSearch = document.getElementById('unitSearch');
+    const unitsData = document.getElementById('unitsData');
+    // Sidebar per-attendance pickers
+    const pickers = {
+      class: {
+        wrap: document.getElementById('picker-class'),
+        input: document.getElementById('unitSearchClass'),
+        data: document.getElementById('unitsDataClass'),
+      },
+      cat: {
+        wrap: document.getElementById('picker-cat'),
+        input: document.getElementById('unitSearchCat'),
+        data: document.getElementById('unitsDataCat'),
+      },
+      exam: {
+        wrap: document.getElementById('picker-exam'),
+        input: document.getElementById('unitSearchExam'),
+        data: document.getElementById('unitsDataExam'),
+      },
+      assignment: {
+        wrap: document.getElementById('picker-assignment'),
+        input: document.getElementById('unitSearchAssignment'),
+        data: document.getElementById('unitsDataAssignment'),
+      }
+    };
+    const courseLabel = document.getElementById('courseLabel');
+    const navAttendance = document.getElementById('navAttendance');
+    const attendanceMenu = document.getElementById('attendanceMenu');
+
+    let students = [];
+    let attendanceState = {};
+    let savedState = {};
+    let currentUnit = '';
+    let currentUnitId = 0;
+    let attendanceType = 'class';
+    let unitsCache = [];
+    let unitLabelMap = {}; // label "CODE - TITLE" -> unit object
+
+    // utility: create letter avatar (initials)
+    function initials(name){
+      if(!name) return '?';
+      return name.split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase();
+    }
+
+    async function loadStudents(){
+      loadingState.textContent = 'Loading…';
+      studentsList.innerHTML = '';
+      try{
+        // Load by selected unit if available (by id or code)
+        if (currentUnitId > 0 || (currentUnit && currentUnit.trim() !== '')) {
+          await loadUnitStudents(currentUnit);
+        } else {
+          // No unit selected: show empty state only (do not auto-load generic demo students)
+          students = [];
+          renderStudents();
+        }
+        // fetch saved attendance if date set
+        if(attDate.value) await fetchAttendance(attDate.value);
+        updateStats();
+      }catch(e){
+        studentsList.innerHTML = '<div class="text-danger">Unable to load students.</div>';
+        console.error(e);
+      } finally {
+        loadingState.textContent = '';
+      }
+    }
+
+    async function loadUnitStudents(code){
+      try{
+        if (!(currentUnitId > 0) && (!code || !code.trim())) {
+          // nothing to query; bail out gracefully
+          students = [];
+          renderStudents();
+          return;
+        }
+        const url = currentUnitId && currentUnitId > 0
+          ? (apiUnitStudents + '?unit_id=' + encodeURIComponent(String(currentUnitId)))
+          : (apiUnitStudents + '?unit_code=' + encodeURIComponent(code));
+        console.log('Loading students from:', url);
+        const res = await fetch(url);
+        console.log('Response status:', res.status);
+        if(!res.ok) {
+          const errorText = await res.text();
+          console.error('API Error:', res.status, errorText);
+          throw new Error('Failed: ' + res.status);
+        }
+        const json = await res.json();
+        console.log('Students API response:', json);
+        const list = Array.isArray(json) ? json : (json.students || []);
+        if(Array.isArray(list)){
+          console.log('Found', list.length, 'students');
+          // map to student structure with extra fields
+          students = list.map(r => ({
+            id: (r.id || r.reg_no || '').toString(),
+            name: r.name,
+            reg_no: r.reg_no || '',
+            year_of_study: (r.year_of_study!==undefined && r.year_of_study!==null) ? r.year_of_study : '',
+            program: r.program || ''
+          }));
+          attendanceState = {};
+          students.forEach(s => attendanceState[s.id] = 'absent');
+          renderStudents();
+        }
+      }catch(err){
+        console.error('Load students error:', err);
+        studentsList.innerHTML = '<div class="text-danger">Unable to load unit students: ' + err.message + '</div>';
+      }
+    }
+
+    function renderStudents(){
+
+      const q = (studentSearch.value || '').trim().toLowerCase();
+      studentsList.innerHTML = '';
+      if(!students.length){ studentsList.innerHTML = '<div class="small-muted">No students found. Select a unit to load from MySQL or search above.</div>'; return; }
+
+      const filtered = students.filter(s => {
+        if(!q) return true;
+        return s.name.toLowerCase().includes(q) || (s.id+''||'').toLowerCase().includes(q);
+
+      });
+
+      filtered.forEach(s => {
+        const entry = document.createElement('div');
+        entry.className = 'student-entry';
+        entry.tabIndex = 0;
+        entry.innerHTML = `
+          <div class="student-meta" style="flex:1;display:flex;align-items:center;gap:.8rem">
+            <div class="avatar" aria-hidden="true">${initials(s.name)}</div>
+            <div style="flex:1;min-width:220px">
+              <div class="student-name">${s.name}</div>
+            </div>
+            <div class="student-id" style="width:180px">${s.reg_no ? s.reg_no : s.id}</div>
+            <div class="student-id" style="width:100px;text-align:left">${s.year_of_study || ''}</div>
+            <div class="student-id" style="width:180px;text-align:left">${s.program || ''}</div>
+          </div>
+          <div class="col-status" style="width:110px;text-align:right">
+            <button class="status-chip ${attendanceState[s.id]==='present' ? 'chip-present' : 'chip-absent'}" data-id="${s.id}" aria-pressed="${attendanceState[s.id]==='present'}">
+              ${attendanceState[s.id]==='present' ? 'Present' : 'Absent'}
+            </button>
+          </div>
+        `;
+        // toggle by clicking either entry or button
+        entry.querySelector('button').addEventListener('click', toggleStudent);
+        entry.addEventListener('keydown', (e) => { if(e.key==='Enter' || e.key===' ') { e.preventDefault(); toggleStudent.call(entry.querySelector('button')); }});
+        entry.addEventListener('click', (ev) => {
+          // if clicked outside button, toggle too
+          if(!ev.target.closest('button')) toggleStudent.call(entry.querySelector('button'));
+        });
+
+        studentsList.appendChild(entry);
+      });
+      updateStats();
+    }
+
+    function toggleStudent(){
+      const id = this.getAttribute('data-id');
+      attendanceState[id] = attendanceState[id] === 'present' ? 'absent' : 'present';
+      renderStudents();
+      renderSummary();
+    }
+
+    function updateStats(){
+      const total = students.length;
+      const present = Object.values(attendanceState).filter(v=>v==='present').length;
+      const absent = total - present;
+      statTotal.textContent = total;
+      statPresent.textContent = present;
+      statAbsent.textContent = absent;
+    }
+
+    function renderSummary(){
+      const total = students.length;
+      const present = Object.values(attendanceState).filter(v=>v==='present').length;
+      const absent = total - present;
+      const dateLabel = attDate.value ? attDate.value : '(no date)';
+      const changed = JSON.stringify(attendanceState) !== JSON.stringify(savedState);
+      summary.innerHTML = `Date: <strong>${dateLabel}</strong><br>Total: <strong>${total}</strong> • Present: <strong class="text-success">${present}</strong> • Absent: <strong class="text-danger">${absent}</strong><br><span class="small-muted">Unsaved changes: ${changed ? '<strong>Yes</strong>' : 'No'}</span>`;
+      updateStats();
+    }
+
+    async function fetchAttendance(date){
+      if(!date) return;
+      if(currentUnitId <= 0) {
+        saveMsg.textContent = 'Select a unit first.';
+        return;
+      }
+      saveMsg.textContent = 'Loading saved…';
+      try{
+        const res = await fetch(apiFetch + '?date=' + encodeURIComponent(date) + '&unit_id=' + currentUnitId);
+        if(!res.ok) throw new Error('Fetch failed');
+        const json = await res.json();
+        if(json && json.success && json.attendance){
+          const map = {};
+          if(Array.isArray(json.attendance)){
+            json.attendance.forEach(r => map[r.student_id] = r.status);
+          } else {
+            Object.assign(map, json.attendance);
+          }
+          students.forEach(s => attendanceState[s.id] = map[s.id] ? map[s.id] : 'absent');
+          savedState = Object.assign({}, attendanceState);
+          renderStudents();
+          renderSummary();
+          saveMsg.textContent = '';
+        } else {
+          // no saved data -> default absent
+          students.forEach(s => attendanceState[s.id] = 'absent');
+          savedState = Object.assign({}, attendanceState);
+          renderStudents();
+          renderSummary();
+          saveMsg.textContent = '';
+        }
+      }catch(err){
+        console.error(err);
+        saveMsg.textContent = 'Unable to load saved.';
+      }
+    }
+
+    async function saveToServer(){
+      if(!attDate.value){ saveMsg.textContent = 'Select a date first.'; saveMsgMain.textContent = 'Select a date first.'; return; }
+      if(currentUnitId <= 0){ saveMsg.textContent = 'Select a unit first.'; saveMsgMain.textContent = 'Select a unit first.'; return; }
+      saveMsg.textContent = 'Saving…';
+      saveMsgMain.textContent = 'Saving…';
+      const payload = { date: attDate.value, unit_id: currentUnitId, attendance: Object.keys(attendanceState).map(id => ({ id, status: attendanceState[id] })) };
+      try{
+        console.log('Saving attendance:', payload);
+        const res = await fetch(apiSave, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        console.log('Save response status:', res.status);
+        const json = await res.json();
+        console.log('Save response:', json);
+        if(json && json.success){ 
+          savedState = Object.assign({}, attendanceState); 
+          saveMsg.textContent = '✅ Successfully saved!'; 
+          saveMsgMain.textContent = '✅ Successfully saved!';
+          
+          // Close attendance form and show success message
+          setTimeout(() => {
+            // Hide attendance view
+            document.getElementById('view-attendance').style.display = 'none';
+            document.getElementById('attendance-stats').style.display = 'none';
+            
+            // Show reports view with success message
+            showReportsWithSavedData();
+          }, 1000);
+        }
+        else { 
+          const errorMsg = json.message || 'Save failed';
+          saveMsg.textContent = '❌ ' + errorMsg; 
+          saveMsgMain.textContent = '❌ ' + errorMsg;
+          console.error('Save failed:', json);
+        }
+      }catch(err){
+        console.error('Save error:', err);
+        saveMsg.textContent = '❌ Error saving: ' + err.message;
+        saveMsgMain.textContent = '❌ Error saving: ' + err.message;
+      }
+    }
+
+    function resetToSaved(){
+      attendanceState = Object.assign({}, savedState);
+      renderStudents();
+      renderSummary();
+      saveMsg.textContent = 'Reset to saved.';
+    }
+
+    function showReportsWithSavedData(){
+      // Switch to reports view
+      document.querySelectorAll('.nav-item[data-target]').forEach(n=>n.classList.remove('active'));
+      document.querySelectorAll('.nav-item[data-target="reports"]').forEach(n=>n.classList.add('active'));
+      document.querySelectorAll('main section').forEach(s => s.style.display = 'none');
+      document.getElementById('view-reports').style.display = 'block';
+
+      // Calculate statistics
+      const total = students.length;
+      const present = Object.values(attendanceState).filter(v=>v==='present').length;
+      const absent = total - present;
+      const percentage = total > 0 ? ((present / total) * 100).toFixed(1) : 0;
+
+      // Build report HTML
+      const reportsContent = document.getElementById('reportsContent');
+      reportsContent.innerHTML = `
+        <div class="alert alert-success" style="background: linear-gradient(90deg,rgba(18,184,134,0.2),rgba(52,211,153,0.1)); border: 1px solid rgba(18,184,134,0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+          <h6 style="margin:0 0 0.5rem 0;"><i class="bi bi-check-circle-fill"></i> Attendance Saved Successfully!</h6>
+          <p style="margin:0;">Attendance for <strong>${currentUnit}</strong> on <strong>${attDate.value}</strong> has been saved to the database.</p>
+        </div>
+
+        <div class="summary-grid" style="margin-bottom:1.5rem;">
+          <div class="stat">
+            <div class="label">Total Students</div>
+            <div class="value">${total}</div>
+          </div>
+          <div class="stat">
+            <div class="label">Present</div>
+            <div class="value text-success">${present}</div>
+          </div>
+          <div class="stat">
+            <div class="label">Absent</div>
+            <div class="value text-danger">${absent}</div>
+          </div>
+        </div>
+
+        <div style="background: linear-gradient(90deg,rgba(123,97,255,0.1),rgba(77,208,225,0.05)); border: 1px solid rgba(123,97,255,0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+          <h6>Attendance Rate</h6>
+          <div style="font-size: 2rem; font-weight: 700; background: var(--accent); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${percentage}%</div>
+          <div class="small-muted">of students were present</div>
+        </div>
+
+        <h6 style="margin-bottom: 1rem;">Detailed Attendance List</h6>
+        <div style="display: grid; gap: 0.5rem;">
+          ${students.map(s => `
+            <div class="student-entry" style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; border-radius: 8px; background: ${attendanceState[s.id] === 'present' ? 'rgba(18,184,134,0.05)' : 'rgba(239,68,68,0.05)'}; border: 1px solid ${attendanceState[s.id] === 'present' ? 'rgba(18,184,134,0.2)' : 'rgba(239,68,68,0.2)'};">
+              <div style="display: flex; align-items: center; gap: 0.8rem;">
+                <div class="avatar" style="width: 40px; height: 40px; border-radius: 8px; background: linear-gradient(180deg,#2b6be6,#7b61ff); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white;">
+                  ${initials(s.name)}
+                </div>
+                <div>
+                  <div style="font-weight: 600;">${s.name}</div>
+                  <div class="small-muted">${s.reg_no || s.id}</div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <div class="small-muted">${s.program || ''} ${s.year_of_study ? 'Year ' + s.year_of_study : ''}</div>
+                <div class="status-chip ${attendanceState[s.id] === 'present' ? 'chip-present' : 'chip-absent'}">
+                  ${attendanceState[s.id] === 'present' ? '<i class="bi bi-check-circle-fill"></i> Present' : '<i class="bi bi-x-circle-fill"></i> Absent'}
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    async function loadStudentEvaluation(){
+      if(currentUnitId <= 0) {
+        document.getElementById('evaluationContent').innerHTML = '<p class="small-muted">Select a unit to view student evaluations.</p>';
+        return;
+      }
+
+      document.getElementById('evaluationContent').innerHTML = '<p class="small-muted">Loading student evaluations...</p>';
+
+      try{
+        const res = await fetch(apiEvaluation + '?unit_id=' + currentUnitId);
+        if(!res.ok) throw new Error('Failed to load evaluations');
+        const json = await res.json();
+
+        if(json && json.evaluations){
+          const evaluations = json.evaluations;
+          const unit = json.unit;
+
+          document.getElementById('evaluationContent').innerHTML = `
+            <div class="alert alert-info" style="background: linear-gradient(90deg,rgba(123,97,255,0.1),rgba(77,208,225,0.05)); border: 1px solid rgba(123,97,255,0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+              <h6 style="margin:0 0 0.5rem 0;"><i class="bi bi-bar-chart-line"></i> Student Evaluations for ${unit.code} - ${unit.title}</h6>
+              <p style="margin:0;">Showing attendance percentages, CAT scores, and exam eligibility status.</p>
+            </div>
+
+            <div style="display: grid; gap: 1rem;">
+              ${evaluations.map(e => `
+                <div class="card-glass" style="padding: 1rem;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                      <div class="avatar" style="width: 50px; height: 50px; border-radius: 10px; background: linear-gradient(180deg,#2b6be6,#7b61ff); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white;">
+                        ${initials(e.name)}
+                      </div>
+                      <div>
+                        <div style="font-weight: 600; font-size: 1.1rem;">${e.name}</div>
+                        <div class="small-muted">${e.reg_no} • ${e.program} Year ${e.year_of_study}</div>
+                      </div>
+                    </div>
+                    <div class="status-chip ${e.eligible_for_exam ? 'chip-present' : 'chip-absent'}" style="font-size: 0.9rem;">
+                      ${e.eligible_for_exam ? '<i class="bi bi-check-circle-fill"></i> Eligible for Exam' : '<i class="bi bi-x-circle-fill"></i> Not Eligible'}
+                    </div>
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                    <div style="text-align: center; padding: 0.75rem; background: rgba(123,97,255,0.1); border-radius: 8px;">
+                      <div style="font-size: 1.5rem; font-weight: 700; color: #7b61ff;">${e.attendance_percentage}%</div>
+                      <div class="small-muted">Attendance</div>
+                    </div>
+                    <div style="text-align: center; padding: 0.75rem; background: rgba(77,208,225,0.1); border-radius: 8px;">
+                      <div style="font-size: 1.5rem; font-weight: 700; color: #4dd0e1;">${e.cat_score}</div>
+                      <div class="small-muted">CAT Score</div>
+                    </div>
+                    <div style="text-align: center; padding: 0.75rem; background: rgba(255,193,7,0.1); border-radius: 8px;">
+                      <div style="font-size: 1.5rem; font-weight: 700; color: #ffc107;">${e.assignment_score}</div>
+                      <div class="small-muted">Assignment</div>
+                    </div>
+                  </div>
+
+                  <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div class="small-muted">
+                      <strong>Exam Eligibility:</strong> ${e.eligible_for_exam ? 'Eligible (≥50% attendance)' : 'Not eligible (<50% attendance)'}
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } else {
+          document.getElementById('evaluationContent').innerHTML = '<p class="small-muted">No evaluation data available for this unit.</p>';
+        }
+      }catch(err){
+        console.error('Load evaluation error:', err);
+        document.getElementById('evaluationContent').innerHTML = '<div class="text-danger">Unable to load student evaluations: ' + err.message + '</div>';
+      }
+    }
+
+    // quick actions
+    markAllPresent.addEventListener('click', ()=>{ students.forEach(s=>attendanceState[s.id]='present'); renderStudents(); renderSummary(); });
+    markAllAbsent.addEventListener('click', ()=>{ students.forEach(s=>attendanceState[s.id]='absent'); renderStudents(); renderSummary(); });
+    saveAttendance.addEventListener('click', saveToServer);
+    resetAttendance.addEventListener('click', resetToSaved);
+    
+    // Connect new save/reset buttons below attendance
+    const saveAttendanceBtn = document.getElementById('saveAttendanceBtn');
+    const resetAttendanceBtn = document.getElementById('resetAttendanceBtn');
+    const saveMsgMain = document.getElementById('saveMsgMain');
+    if (saveAttendanceBtn) {
+      saveAttendanceBtn.addEventListener('click', () => {
+        saveToServer();
+        // Also show message in main location
+        setTimeout(() => { saveMsgMain.textContent = saveMsg.textContent; }, 100);
+      });
+    }
+    if (resetAttendanceBtn) {
+      resetAttendanceBtn.addEventListener('click', resetToSaved);
+    }
+    
+    studentSearch.addEventListener('input', renderStudents);
+    // Populate student search suggestions from MySQL
+    async function prefetchStudents(){
+      try{
+        const res = await fetch(apiStudents);
+        if(!res.ok) return;
+        const data = await res.json();
+        if(!Array.isArray(data)) return;
+        studentsDataList.innerHTML = '';
+        data.forEach(s => {
+          const opt = document.createElement('option');
+          const label = (s.name ? s.name : (s.reg_no || ('ID '+s.id))) + (s.reg_no ? (' — '+s.reg_no) : '');
+          opt.value = label;
+          studentsDataList.appendChild(opt);
+        });
+      }catch(e){ console.error(e); }
+    }
+    studentSearch.addEventListener('focus', prefetchStudents);
+    attDate.addEventListener('change', ()=>{ if(attDate.value) fetchAttendance(attDate.value); else { students.forEach(s=>attendanceState[s.id]='absent'); savedState={}; renderStudents(); renderSummary(); }});
+
+    // side nav behavior (only bind to items that navigate views)
+    document.querySelectorAll('.nav-item[data-target]').forEach(el => {
+      el.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item[data-target]').forEach(n=>n.classList.remove('active'));
+        el.classList.add('active');
+        const t = el.getAttribute('data-target');
+        document.querySelectorAll('main section').forEach(s => s.style.display = 'none');
+        const view = document.getElementById('view-' + t) || document.getElementById('view-'+t);
+        if(view) view.style.display = 'block';
+
+        // Load evaluation data when evaluation tab is clicked
+        if(t === 'evaluation') {
+          loadStudentEvaluation();
+        }
+      });
+      el.addEventListener('keydown', e => { if(e.key==='Enter' || e.key===' ') { e.preventDefault(); el.click(); }});
+    });
+
+    // Attendance dropdown behavior
+    navAttendance.addEventListener('click', () => {
+      const open = attendanceMenu.style.display === 'block';
+      attendanceMenu.style.display = open ? 'none' : 'block';
+      navAttendance.setAttribute('aria-expanded', String(!open));
+      // Ensure the attendance form view is visible when Attendance is clicked
+      document.querySelectorAll('main section').forEach(s => s.style.display = 'none');
+      const view = document.getElementById('view-attendance');
+      if (view) view.style.display = 'block';
+    });
+    attendanceMenu.querySelectorAll('[data-att]').forEach(el => {
+      el.addEventListener('click', () => {
+        attendanceType = el.getAttribute('data-att');
+        // Keep same view for now; could toggle different sections if needed
+        document.querySelectorAll('#attendanceMenu .nav-item').forEach(n=>n.classList.remove('active'));
+        el.classList.add('active');
+        // Toggle only the selected picker's visibility
+        Object.keys(pickers).forEach(k => { pickers[k].wrap.style.display = (k===attendanceType) ? 'block' : 'none'; });
+        // Ensure the attendance form view is visible
+        document.querySelectorAll('main section').forEach(s => s.style.display = 'none');
+        const view = document.getElementById('view-attendance');
+        if (view) view.style.display = 'block';
+      });
+    });
+
+    // Unit search
+    async function fetchUnitsList(q){
+      try{
+        console.log('Fetching units with query:', q);
+        const res = await fetch(apiUnits + '?q=' + encodeURIComponent(q));
+        console.log('Response status:', res.status);
+        if(!res.ok) {
+          console.error('Units fetch failed:', res.status, res.statusText);
+          return [];
+        }
+        const data = await res.json();
+        console.log('Units data received:', data);
+        if(!Array.isArray(data)) {
+          console.error('Units data is not an array:', data);
+          return [];
+        }
+        unitsCache = data; // keep last results to resolve title
+        unitLabelMap = {};
+        // Fill all datalists (topbar and pickers)
+        const lists = [unitsData, pickers.class.data, pickers.cat.data, pickers.exam.data, pickers.assignment.data];
+        lists.forEach(dl => { 
+          if(dl){ 
+            dl.innerHTML=''; 
+            data.forEach(u=>{ 
+              const label = `${u.code} - ${u.title}`; 
+              unitLabelMap[label] = u; 
+              const opt=document.createElement('option'); 
+              opt.value = label; 
+              dl.appendChild(opt); 
+            }); 
+            console.log(`Populated ${dl.id} with ${data.length} units`);
+          }
+        });
+        return data;
+      }catch(e){ 
+        console.error('Error fetching units:', e); 
+        return []; 
+      }
+    }
+
+    unitSearch.addEventListener('input', async (e) => {
+      const q = (unitSearch.value || '').trim();
+      if (q.length >= 1) { await fetchUnitsList(q); }
+    });
+
+    unitSearch.addEventListener('change', () => {
+      const v = (unitSearch.value || '').trim();
+      if (!v) return;
+      const code = v.split(' - ')[0];
+      currentUnit = code;
+      const found = (unitsCache||[]).find(u => u.code === code);
+      currentUnitId = found ? (found.id || 0) : 0;
+      courseLabel.textContent = found ? `${found.code} — ${found.title}` : code;
+      // close attendance dropdown if open
+      attendanceMenu.style.display = 'none';
+      navAttendance.setAttribute('aria-expanded','false');
+      Object.keys(pickers).forEach(k => { pickers[k].wrap.style.display = 'none'; });
+      // Load students in attendance view when unit is selected
+      document.querySelectorAll('main section').forEach(s => s.style.display = 'none');
+      const viewA = document.getElementById('view-attendance');
+      if (viewA) viewA.style.display = 'block';
+      loadStudents();
+    });
+    unitSearch.addEventListener('focus', async () => { await fetchUnitsList(''); });
+    // If user typed a full label that matches, auto-resolve on blur
+    unitSearch.addEventListener('blur', () => {
+      const v2 = (unitSearch.value || '').trim();
+      if (v2 && unitLabelMap[v2]) {
+        const u = unitLabelMap[v2];
+        currentUnit = u.code; currentUnitId = u.id || 0; courseLabel.textContent = `${u.code} — ${u.title}`;
+        attendanceMenu.style.display = 'none'; navAttendance.setAttribute('aria-expanded','false'); Object.keys(pickers).forEach(k => { pickers[k].wrap.style.display = 'none'; });
+        // Load students in attendance view when unit is selected from blur
+        document.querySelectorAll('main section').forEach(s => s.style.display = 'none');
+        const viewA = document.getElementById('view-attendance');
+        if (viewA) viewA.style.display = 'block';
+        loadStudents();
+      }
+    });
+
+    // Hook per-attendance inputs
+    Object.keys(pickers).forEach(key => {
+      const p = pickers[key];
+      if (!p || !p.input) return;
+      p.input.addEventListener('input', async () => {
+        const q = (p.input.value || '').trim();
+        if (q.length >= 1) { await fetchUnitsList(q); }
+      });
+      p.input.addEventListener('change', () => {
+        const v = (p.input.value || '').trim();
+        if (!v) return;
+        const mapped = unitLabelMap[v];
+        const code = mapped ? mapped.code : v.split(' - ')[0];
+        currentUnit = code;
+        const found = mapped || (unitsCache||[]).find(u => u.code === code);
+        currentUnitId = found ? (found.id || 0) : 0;
+        courseLabel.textContent = found ? `${found.code} — ${found.title}` : code;
+        // close dropdown
+        attendanceMenu.style.display = 'none';
+        navAttendance.setAttribute('aria-expanded','false');
+        Object.keys(pickers).forEach(k => { pickers[k].wrap.style.display = 'none'; });
+        // Switch to evaluation view when unit is selected from picker
+        document.querySelectorAll('.nav-item[data-target]').forEach(n=>n.classList.remove('active'));
+        document.querySelectorAll('.nav-item[data-target="evaluation"]').forEach(n=>n.classList.add('active'));
+        document.querySelectorAll('main section').forEach(s => s.style.display = 'none');
+        const viewE = document.getElementById('view-evaluation');
+        if (viewE) viewE.style.display = 'block';
+        loadStudentEvaluation();
+      });
+
+      // If user typed a full label that matches, auto-resolve on input
+      p.input.addEventListener('blur', () => {
+        const v2 = (p.input.value || '').trim();
+        if (v2 && unitLabelMap[v2]) {
+          const u = unitLabelMap[v2];
+          currentUnit = u.code; currentUnitId = u.id || 0; courseLabel.textContent = `${u.code} — ${u.title}`;
+          attendanceMenu.style.display = 'none'; navAttendance.setAttribute('aria-expanded','false'); Object.keys(pickers).forEach(k => { pickers[k].wrap.style.display = 'none'; });
+          // Switch to evaluation view when unit is selected from picker blur
+          document.querySelectorAll('.nav-item[data-target]').forEach(n=>n.classList.remove('active'));
+          document.querySelectorAll('.nav-item[data-target="evaluation"]').forEach(n=>n.classList.add('active'));
+          document.querySelectorAll('main section').forEach(s => s.style.display = 'none');
+          const viewE = document.getElementById('view-evaluation');
+          if (viewE) viewE.style.display = 'block';
+          loadStudentEvaluation();
+        }
+      });
+      p.input.addEventListener('focus', async () => { await fetchUnitsList(''); });
+    });
+
+    // init
+    window.addEventListener('load', async ()=>{
+      attDate.value = new Date().toISOString().slice(0,10);
+      await fetchUnitsList(''); // prefill all unit datalists
+      prefetchStudents(); // fill student dropdown
+      // Do NOT auto-load students on page reload - only when unit is selected
+    });
+  </script>
+  <footer class="app-footer">
+    <span class="label">Quick tip</span>
+    <span class="small-muted" style="font-size:.85rem">Choose a date to load saved attendance, then Save to persist.</span>
+  </footer>
+</body>
+</html>

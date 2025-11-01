@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Sign up — Lecturer</title>
+<style>
+:root{
+    --bg-1: #071426;
+    --bg-2: #06304a;
+    --accent1: #5cb85c;
+    --accent2: #3bb673;
+    --muted: #9fb0c4;
+    --card-bg: rgba(255,255,255,0.03);
+    --glass: rgba(255,255,255,0.04);
+    --radius: 14px;
+    --shadow: 0 20px 50px rgba(2,6,23,0.6);
+    --max-w: 920px;
+}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:
+    radial-gradient(600px 300px at 10% 10%, rgba(91,184,92,0.06), transparent 8%),
+    linear-gradient(180deg,var(--bg-1),var(--bg-2));
+    -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;padding:28px;color:#eef6fb;}
+
+.container{width:100%;max-width:var(--max-w);display:grid;grid-template-columns:1fr 420px;gap:26px;align-items:stretch;padding:12px}
+
+.hero{
+    padding:28px;border-radius:var(--radius);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    box-shadow:var(--shadow);border:1px solid rgba(255,255,255,0.03);overflow:hidden;
+    display:flex;flex-direction:column;justify-content:center;gap:14px;
+}
+.brand{display:flex;align-items:center;gap:12px}
+.mark{width:64px;height:64px;border-radius:14px;background:linear-gradient(135deg,var(--accent1),var(--accent2));
+    display:grid;place-items:center;color:#fff;font-weight:800;font-size:26px;box-shadow:0 12px 36px rgba(59,182,115,0.14)}
+.hero h1{margin:0;font-size:28px;color:#f8feff}
+.hero p{margin:0;color:var(--muted);font-size:15px}
+
+.card{
+    padding:26px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border:1px solid rgba(255,255,255,0.03);backdrop-filter: blur(6px);display:flex;flex-direction:column;gap:12px;
+}
+
+.form-row{display:flex;flex-direction:column;gap:8px}
+label{font-size:13px;color:var(--muted)}
+input[type="text"],input[type="email"],input[type="password"]{
+    padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:#eaf7f1;font-size:15px;
+    outline: none;transition: box-shadow .12s ease, border-color .12s ease;
+}
+input:focus{box-shadow:0 8px 20px rgba(59,182,115,0.08);border-color:rgba(91,184,92,0.6)}
+
+.small{font-size:13px;color:var(--muted)}
+.btn{
+    appearance:none;border:0;outline:0;padding:12px 16px;border-radius:12px;color:white;font-weight:700;
+    background:linear-gradient(90deg,var(--accent1),var(--accent2));cursor:pointer;box-shadow:0 12px 30px rgba(59,182,115,0.16);transition:transform .12s ease;
+}
+.btn:active{transform:translateY(1px)}
+.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);padding:10px 12px;border-radius:10px}
+
+.panel{
+    padding:22px;border-radius:16px;background:linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+}
+.panel .icon{width:88px;height:88px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent1),var(--accent2));font-size:36px;color:#fff;box-shadow:0 14px 36px rgba(59,182,115,0.16)}
+.notice{font-size:13px;color:var(--muted);text-align:center}
+
+.footer-links{display:flex;gap:10px;align-items:center;margin-top:6px}
+.link{color:var(--muted);text-decoration:none;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.02);background:rgba(255,255,255,0.01)}
+
+@media (max-width:920px){
+    .container{grid-template-columns:1fr;gap:18px;padding:8px}
+    .mark{width:56px;height:56px}
+}
+</style>
+</head>
+<body>
+<div class="container" role="main" aria-labelledby="signup-title">
+    <section class="hero" aria-hidden="false">
+        <div class="brand">
+            <div class="mark">A</div>
+            <div>
+                <div style="font-weight:800;color:#e7fff0">Attendance</div>
+                <div style="font-size:13px;color:var(--muted)">School Attendance System — Lecturer signup</div>
+            </div>
+        </div>
+
+        <h1 id="signup-title">Create your lecturer account</h1>
+        <p class="small">Register with your school email or ID. After signup you will be able to sign in and access unit attendance dashboards.</p>
+
+        <div class="card" aria-label="Signup form area">
+            <form id="signupForm" onsubmit="return signup(event)">
+                <div class="form-row">
+                    <label for="name">Full name</label>
+                    <input id="name" name="name" required placeholder="Name" />
+                </div>
+
+                <div class="form-row">
+                    <label for="email">Email</label>
+                    <input id="email" name="email" type="email" required placeholder="you@school.edu" />
+                </div>
+
+                <div class="form-row">
+                    <label for="password">Password</label>
+                    <input id="password" name="password" type="password" required placeholder="Choose a secure password" />
+                </div>
+
+                <div style="display:flex;gap:10px;align-items:center;margin-top:6px;">
+                    <button class="btn" type="submit" id="signupBtn">Create account</button>
+                    <a class="ghost link" href="index.html">Already have an account? Log in</a>
+                </div>
+
+                <div class="notice">By creating an account you agree to your school's usage policy.</div>
+            </form>
+        </div>
+
+        <!-- Inline login form removed by request -->
+    </section>
+
+    <aside class="panel" aria-hidden="false">
+        <div class="icon">✓</div>
+        <h3 style="margin:0">Ready to teach with ease</h3>
+        <p class="small">After signup you can create or load units, view CAT/Class/Exam attendance progress and export reports.</p>
+        <div class="footer-links">
+            <button class="ghost" onclick="learnMore()">How it works</button>
+            <a class="ghost link" href="../" style="text-decoration:none">Home</a>
+        </div>
+    </aside>
+</div>
+
+<script>
+    async function signup(e){
+        e.preventDefault();
+        const btn = document.getElementById('signupBtn');
+        btn.disabled = true;
+        const name = (document.getElementById('name').value || '').trim();
+        const email = (document.getElementById('email').value || '').trim();
+        const password = (document.getElementById('password').value || '');
+        try{
+            const res = await fetch('/atte/api/signup.php', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            });
+            const ct = res.headers.get('content-type')||'';
+            const data = ct.includes('application/json') ? await res.json() : { success:false, message: await res.text() };
+            if(res.ok && data && data.success){
+                window.location.href = 'lecturer-dashboard.html';
+                return false;
+            }
+            alert((data && (data.message||data.details)) || 'Signup failed');
+        }catch(err){
+            console.error(err);
+            alert('Network error. Check server/API.');
+        } finally {
+            btn.disabled = false;
+        }
+        return false;
+    }
+
+    function learnMore(){ alert('This system allows secure attendance tracking, reporting and exports for your units.'); }
+</script>
+</body>
+</html>

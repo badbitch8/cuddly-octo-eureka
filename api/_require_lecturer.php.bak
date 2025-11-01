@@ -1,0 +1,9 @@
+<?php
+// Guard: require a logged-in lecturer session. Include at top of protected endpoints.
+session_start();
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'lecturer') {
+    // Redirect unauthenticated requests to the site index page
+    header('Location: /atte/index.html'); // changed from cover.html to index.html
+    exit;
+}
+?>

@@ -1,180 +1,202 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>MUT  Attendance Manager</title>
-	<link rel="stylesheet" href="index.css" >
-	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Attendance — Login</title>
+<style>
+    :root{
+        --bg-1:#071426; --bg-2:#073a5a; --accent1:#5cb85c; --accent2:#3bb673;
+        --muted:#9fb0c4; --glass: rgba(255,255,255,0.04); --radius:14px;
+    }
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#eef6fb;
+        background:radial-gradient(600px 300px at 10% 10%, rgba(59,182,115,0.08), transparent 8%),
+                   linear-gradient(180deg,var(--bg-1),var(--bg-2));
+        -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center;padding:28px;}
+    .wrap{width:100%;max-width:980px;display:grid;grid-template-columns:1fr 420px;gap:26px;align-items:stretch;}
+    .hero{padding:34px;border-radius:var(--radius);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+        box-shadow:0 18px 50px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03);position:relative;overflow:hidden;}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
+    .mark{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent1),var(--accent2));
+        display:grid;place-items:center;color:#fff;font-weight:700;font-size:22px;box-shadow:0 10px 30px rgba(59,182,115,0.14);}
+    .hero h2{margin:0 0 8px 0;font-size:26px;line-height:1;color:#f8feff;}
+    .hero p{margin:0;color:var(--muted);font-size:14px;}
+    .feature-grid{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap;}
+    .feature{background:var(--glass);padding:10px 12px;border-radius:10px;color:var(--muted);font-size:13px;border:1px solid rgba(255,255,255,0.02);}
+    .card{padding:28px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+        border:1px solid rgba(255,255,255,0.03);backdrop-filter: blur(6px);display:flex;flex-direction:column;gap:14px;}
+    form{display:flex;flex-direction:column;gap:12px;}
+    label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px;}
+    .input{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.02);padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);}
+    input[type="text"],input[type="password"],input[type="email"]{flex:1;background:transparent;border:0;outline:0;color:#eaf7f1;font-size:15px;}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .btn{appearance:none;border:0;outline:0;padding:12px 16px;border-radius:12px;color:white;font-weight:700;
+        background:linear-gradient(90deg,var(--accent1),var(--accent2));cursor:pointer;box-shadow:0 12px 30px rgba(59,182,115,0.16);transition:transform .12s ease;}
+    .ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted);padding:10px 12px;border-radius:10px;}
+    .small{font-size:13px;color:var(--muted);}
+    .eye{width:20px;height:20px;opacity:0.9;cursor:pointer}
+    .note{font-size:12px;color:var(--muted);text-align:center;margin-top:6px}
+    .error{border-color:#ff7b7b;box-shadow:0 6px 18px rgba(255,80,80,0.08)}
+    @keyframes shake {0%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}100%{transform:translateX(0)}}
+    .shake{animation:shake .35s linear}
+    .panel{padding:26px;border-radius:18px;background:linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+    .panel .icon{width:96px;height:96px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent1),var(--accent2));font-size:42px;color:#fff;box-shadow:0 14px 36px rgba(59,182,115,0.16)}
+    .panel h3{margin:0;font-size:20px;color:#f8feff}
+    .panel p{margin:0;color:var(--muted);font-size:14px;text-align:center}
+    @media (max-width:900px){.wrap{grid-template-columns:1fr;gap:16px;padding:0 8px}}
+</style>
 </head>
 <body>
-	<header class="main-header">
-		<div class="header-content">
-			<div class="header-back">
-				<button id="back-btn" class="ghost hidden">←</button>
-			</div>
-			<div class="header-left">
-		<div class="logo">
-			<img src="https://www.mut.ac.ke/wp-content/uploads/2020/07/MUT-Logo.png" alt="MUT Logo" class="mut-logo" style="height: 40px;">
-			<h1>📚 MUT Attendance Manager</h1>
+<div class="wrap" role="main" aria-labelledby="login-title">
+    <section class="hero" aria-hidden="false">
+        <div class="brand">
+            <div class="mark">A</div>
+            <div>
+                <div style="font-weight:700;color:#e7fff0">Attendance</div>
+                <div style="font-size:12px;color:var(--muted)">School Attendance System</div>
+            </div>
+        </div>
 
-		</div>
-			</div>
-			<div class="header-center">
-				<div class="header-info">
-					<h2 id="header-title" class="hidden">Welcome, <span id="lecturer-name"></span></h2>
-					<h2 id="header-unit-title" class="hidden"><span id="unit-title"></span></h2>
-					<p id="header-date" class="muted hidden"></p>
-				</div>
-			</div>
-			<div class="header-right">
-				<div id="header-actions" class="hidden">
-					<button id="download-btn" class="secondary">Download CSV</button>
-					<button id="reset-btn" class="ghost">Reset</button>
-					<button id="manage-unit-btn" class="ghost">Manage unit</button>
-				</div>
-				<button id="logout-btn" class="ghost hidden">Log out</button>
-			</div>
-		</div>
-	</header>
+        <h2 id="login-title">Welcome back <br>Sign in to continue</h2>
+        <p>Secure access for lecturers. Use your email to log in.</p>
 
-	<main id="app">
-		<!-- Auth Views -->
-		<section id="auth-view" class="view">
-			<div class="card">
-				<h2>Welcome to MUT Attendance</h2>
-				<p>Interactive  Campus Management</p>
+        <div class="feature-grid" aria-hidden="true">
+            <div class="feature">Fast check-in</div>
+            <div class="feature">Offline friendly</div>
+            <div class="feature">Export reports</div>
+        </div>
+        <div style="height:12px"></div>
 
-				<form id="login-form" class="form">
-					<label>Email
-						<input type="email" id="login-email" required autocomplete="email" />
-					</label>
-					<label>Password
-						<input type="password" id="login-password" required autocomplete="current-password" />
-					</label>
-					<button type="submit" class="primary">Log in</button>
-					<div class="links-row">
-						<a href="#" id="link-to-signup">Don't have an account? Sign up</a>
-						<a href="#" id="link-forgot">Forgot password?</a>
-					</div>
-				</form>
+        <div class="card" aria-label="Login form area">
+            <form id="loginForm" onsubmit="return login(event)">
+                <div>
+                    <label for="user">Email</label>
+                    <div class="input" id="userWrap">
+                        <input id="user" name="user" type="text" placeholder= "@gmail.com" autocomplete="username" />
+                    </div>
+                </div>
 
-				<form id="signup-form" class="form hidden">
-					<label>Full name
-						<input type="text" id="signup-name" required />
-					</label>
-					<label>Email
-						<input type="email" id="signup-email" required autocomplete="email" />
-					</label>
-					<label>Password
-						<input type="password" id="signup-password" required minlength="6" autocomplete="new-password" />
-					</label>
-					<label>Role
-						<select id="signup-role" required>
-							<option value="student">Student</option>
-							<option value="faculty">Faculty</option>
-							<option value="admin">Admin</option>
-						</select>
-					</label>
-					<button type="submit" class="primary">Create account</button>
-					<div class="links-row">
-						<a href="#" id="link-to-login">Already have an account? Log in</a>
-					</div>
-				</form>
-			</div>
-		</section>
+                <div>
+                    <label for="password">Password</label>
+                    <div class="input" id="passWrap">
+                        <input id="password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" />
+                        <svg class="eye" id="togglePass" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" stroke="rgba(255,255,255,0.6)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z" stroke="rgba(255,255,255,0.6)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="row" style="margin-top:6px;">
+                        <label class="small"><input type="checkbox" name="remember" style="margin-right:8px;vertical-align:middle"/> Remember me</label>
+                        <div style="display:flex;gap:10px;align-items:center;">
+                          <a class="small" href="signup.html" style="color:var(--muted);text-decoration:none">Sign up</a>
+                          <a class="small" href="#" id="forgot" style="color:var(--muted);text-decoration:none">Forgot password?</a>
+                        </div>
+                    </div>
+                </div>
 
-		<!-- 3D Campus View -->
-		<section id="campus-view" class="view hidden">
-			<canvas id="3d-canvas"></canvas>
-			<div id="campus-ui" class="campus-overlay hidden">
-				<h3 id="campus-title">MUT Campus</h3>
-				<p>Click on buildings to access features</p>
-			</div>
-		</section>
+                <div style="display:flex;gap:10px;margin-top:6px;align-items:center;">
+                    <button type="submit" class="btn" aria-label="Sign in" id="signBtn">Sign In</button>
+                    <button type="button" class="ghost" onclick="demoLogin()" title="Try demo account"></button>
+                </div>
 
-		<!-- Unit/Course Setup View -->
-		<section id="unit-view" class="view hidden">
-			<div class="card">
-				<h3>Select Course</h3>
-				<form id="unit-form" class="form row">
-					<label>Course name
-						<input list="unit-name-list" type="text" id="unit-name" placeholder="e.g., Introduction to Computing" required />
-						<datalist id="unit-name-list"></datalist>
-					</label>
-					<label>Course code
-						<input list="unit-code-list" type="text" id="unit-code" placeholder="e.g., BIT101" required />
-						<datalist id="unit-code-list"></datalist>
-					</label>
-					<button type="submit" class="primary">Load Course</button>
-				</form>
-			</div>
-		</section>
+                <div class="note" id="notice">By signing in you agree to your school's usage policy.</div>
+            </form>
+        </div>
+    </section>
 
-		<!-- Faculty Dashboard (Attendance Marking) -->
-		<section id="faculty-dashboard" class="view hidden">
-			<div class="card">
-				<h3 id="faculty-course-title">Mark Attendance</h3>
-				<div class="list-head">
-					<div>Name</div>
-					<div>Reg No</div>
-					<div>Status</div>
-				</div>
-				<div id="faculty-students-list" class="list"></div>
-				<button id="faculty-download" class="primary">Generate Report</button>
-			</div>
-		</section>
+    <aside class="panel" aria-hidden="false">
+        <div class="icon">✓</div>
+        <h3>Quick, secure attendance</h3>
+        <div style="height:8px"></div>
+        <div style="display:flex;gap:8px">
+            <button class="ghost" onclick="learnMore()" aria-label="Learn more">Learn more</button>
+            <a href="../" class="ghost" style="text-decoration:none;color:var(--muted);display:inline-flex;align-items:center;padding:10px 12px;border-radius:10px">Home</a>
+        </div>
+    </aside>
+</div>
 
-		<!-- Student Dashboard -->
-		<section id="student-dashboard" class="view hidden">
-			<div class="card">
-				<h3>Your Attendance</h3>
-				<div id="student-attendance-list"></div>
-				<canvas id="student-chart" width="400" height="200"></canvas>
-			</div>
-		</section>
+<script>
+    // Ensure we run from Apache (http://localhost/atte) so PHP APIs are available
+    (function(){
+        var port = window.location.port;
+        var host = window.location.hostname;
+        if ((port && port !== '' && port !== '80') || host !== 'localhost') {
+            window.location.href = 'http://localhost/atte/client/index.html';
+            return;
+        }
+    })();
+    // API base (served from XAMPP)
+    const API_BASE = window.location.origin + '/atte/api';
 
-		<!-- Admin Panel -->
-		<section id="admin-panel" class="view hidden">
-			<div class="card">
-				<h3>Admin Reports</h3>
-				<select id="admin-course-select">
-					<option value="">All Courses</option>
-				</select>
-				<button id="admin-generate-report" class="primary">Generate Report</button>
-				<div id="admin-report"></div>
-				<canvas id="admin-chart" width="400" height="200"></canvas>
-			</div>
-		</section>
+    // UI helpers
+    const toggle = document.getElementById('togglePass');
+    const pwd = document.getElementById('password');
+    toggle.addEventListener && toggle.addEventListener('click', ()=> {
+        const is = pwd.type === 'password';
+        pwd.type = is ? 'text' : 'password';
+        toggle.style.opacity = is ? '1' : '0.7';
+    });
 
-		<!-- Dashboard View (legacy, for unit students) -->
-		<section id="dashboard-view" class="view hidden">
-			<div class="card">
-				<div class="list-head">
-					<div>Name</div>
-					<div>Reg_No</div>
-					<div>Status</div>
-				</div>
-				<div id="students-list" class="list"></div>
-			</div>
-		</section>
-	</main>
+    function setError(el, on=true){
+        const wrap = document.getElementById(el+'Wrap');
+        if(on){ wrap.classList.add('error','shake'); setTimeout(()=>wrap.classList.remove('shake'),350); }
+        else wrap.classList.remove('error');
+    }
 
-	<footer class="main-footer">
-		<div class="footer-content">
-		<div class="footer-info">
-			<p>&copy; 2024 Murang'a University of Technology. All rights reserved.</p>
-			<p>Interactive Attendance Management System</p>
-		</div>
-			<div class="footer-links">
-				<a href="#" class="footer-link">Help</a>
-				<a href="#" class="footer-link">Privacy</a>
-				<a href="#" class="footer-link">Terms</a>
-			</div>
-		</div>
-	</footer>
+    async function login(e){
+        e.preventDefault();
+        setError('user', false); setError('pass', false);
+        const user = document.getElementById('user').value.trim();
+        const pass = document.getElementById('password').value.trim();
+        if(!user){ setError('user', true); return false; }
+        if(!pass){ setError('pass', true); return false; }
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="index.js"></script>
+        const signBtn = document.getElementById('signBtn');
+        signBtn.disabled = true;
+        signBtn.textContent = 'Signing in...';
+
+        try{
+            const res = await fetch(`${API_BASE}/login.php`, {
+                method: 'POST',
+                credentials: 'include', // important: save PHP session cookie
+                headers: {'Content-Type':'application/json','Accept':'application/json'},
+                body: JSON.stringify({ email: user, password: pass })
+            });
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                // redirect to lecturer dashboard standalone page
+                location.href = '/atte/client/lecturer-dashboard.html';
+                return true;
+            }
+
+            if (res.status === 401) {
+                alert('Invalid credentials');
+            } else {
+                alert(data.message || 'Login failed');
+            }
+        } catch(err){
+            console.error(err);
+            alert('Network error. Check server/API.');
+        } finally {
+            signBtn.disabled = false;
+            signBtn.textContent = 'Sign In';
+        }
+        return false;
+    }
+
+    function demoLogin(){
+        document.getElementById('user').value = 'demo@school.edu';
+        document.getElementById('password').value = 'demopass';
+        // call login directly to ensure credentials included
+        document.getElementById('loginForm').dispatchEvent(new Event('submit', {cancelable:true, bubbles:true}));
+    }
+
+    function learnMore(){ alert('Attendance system: secure sign-in, reports and export — built for schools.'); }
+    (function(){
+      var f = document.getElementById('forgot');
+      if (f) f.addEventListener('click', function(e){ e.preventDefault(); alert('Password reset is not set up yet.'); });
+    })();
+</script>
 </body>
 </html>

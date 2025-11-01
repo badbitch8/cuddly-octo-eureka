@@ -1,11 +1,17 @@
 (function () {
-	const API_BASE = storageGetEnv('API_BASE', 'http://localhost:8080/api');
+	const API_BASE = (function resolveApiBase() {
+    const stored = storageGetEnv('API_BASE', '');
+    if (stored) return stored;
+    // Serve API from XAMPP installation path
+    return window.location.origin + '/atte/api';
+})();
 
 	const views = {
 		auth: document.getElementById('auth-view'),
-		campus: document.getElementById('campus-view'),
-		unit: document.getElementById('unit-view'),
-		facultyDashboard: document.getElementById('faculty-dashboard'),
+		lecturerDashboard: document.getElementById('lecturer-dashboard'),
+		unitSetup: document.getElementById('unit-setup'),
+		attendanceRoster: document.getElementById('attendance-roster'),
+		studentProgress: document.getElementById('student-progress'),
 		studentDashboard: document.getElementById('student-dashboard'),
 		adminPanel: document.getElementById('admin-panel'),
 		dashboard: document.getElementById('dashboard-view') // legacy
@@ -318,7 +324,6 @@
 		const name = document.getElementById('signup-name').value.trim();
 		const email = document.getElementById('signup-email').value.trim().toLowerCase();
 		const password = document.getElementById('signup-password').value;
-		const role = document.getElementById('signup-role').value;
 
 		if (!name || !email || !password) {
 			alert('Please fill in all fields');
@@ -326,14 +331,13 @@
 		}
 
 		try {
-			const data = { action: 'create', name, email, password, role };
-			if (role === 'student') {
-				data.reg_no = prompt('Enter registration number:') || '';
-				data.year_of_study = 1;
-			}
-			const resp = await apiJson('/students.php', 'POST', data);
-			alert('Account created successfully!');
-			setTab('login');
+			const resp = await apiJson('/signup.php', 'POST', { name, email, password });
+			// Auto-login and route to dashboard
+			setAuth({ loggedIn: true, user: { name: resp.name || name, email }, role: resp.role || 'faculty', token: '' });
+			const ln = document.getElementById('lecturer-name');
+			if (ln) ln.textContent = resp.name || name;
+			loadLecturerDashboard();
+			show('lecturerDashboard');
 		} catch (err) {
 			alert('Signup failed: ' + err.message);
 		}
@@ -345,15 +349,18 @@
 		const password = document.getElementById('login-password').value;
 
 		if (!email || !password) {
-			alert('Please enter both email and password');
+			alert('Please fill in all fields');
 			return;
 		}
 
 		try {
-			const resp = await apiJson('/students.php', 'POST', { action: 'login', email, password });
-			setAuth({ loggedIn: true, user: resp.user, role: resp.user.role, token: resp.token });
-			els.lecturerName.textContent = resp.user.name;
-			show('campus'); // Go to 3D campus after login
+			const resp = await apiJson('/login.php', 'POST', { email, password });
+			setAuth({ loggedIn: true, user: { name: resp.name || '', email }, role: resp.role || 'faculty', token: '' });
+			if (els.lecturerName) els.lecturerName.textContent = resp.name || '';
+			
+			// Always go to lecturer dashboard
+			loadLecturerDashboard();
+			show('lecturerDashboard');
 		} catch (err) {
 			alert('Login failed: ' + err.message);
 		}
@@ -631,10 +638,704 @@
 		}).catch(err => console.error('Load courses failed:', err));
 	}
 
+	// Comprehensive Dashboard Functions
+	let lecturerUnits = [];
+	let currentUnit = null;
+	let currentStudent = null;
+
+	function updateDataFreshness() {
+		const now = new Date();
+		const timeString = now.toLocaleTimeString();
+		const updateTimeEl = document.getElementById('update-time');
+		if (updateTimeEl) {
+			updateTimeEl.textContent = timeString;
+		}
+	}
+
+	function loadLecturerDashboard() {
+		updateDataFreshness();
+		loadLecturerUnits();
+		setupDashboardFilters();
+	}
+
+	async function loadLecturerUnits() {
+		try {
+			// Simulate loading lecturer's units
+			lecturerUnits = [
+				{
+					id: 1,
+					code: 'COMP 101',
+					title: 'Introduction to Programming',
+					year: 1,
+					status: 'active', // active, completed, upcoming
+					schedule: 'Mon 10:00-11:30',
+					nextSession: '2024-01-15 10:00'
+				},
+				{
+					id: 2,
+					code: 'MATH 201',
+					title: 'Calculus II',
+					year: 2,
+					status: 'upcoming',
+					schedule: 'Wed 14:00-15:30',
+					nextSession: '2024-01-17 14:00'
+				},
+				{
+					id: 3,
+					code: 'ENG 301',
+					title: 'Advanced Algorithms',
+					year: 3,
+					status: 'completed',
+					schedule: 'Fri 09:00-10:30',
+					nextSession: '2024-01-19 09:00'
+				}
+			];
+			
+			renderUnitsGrid();
+		} catch (err) {
+			console.error('Failed to load lecturer units:', err);
+		}
+	}
+
+	function renderUnitsGrid() {
+		const unitsGrid = document.getElementById('units-grid');
+		if (!unitsGrid) return;
+
+		unitsGrid.innerHTML = lecturerUnits.map(unit => `
+			<div class="unit-card" data-unit-id="${unit.id}" onclick="selectUnit(${unit.id})">
+				<h4>${unit.code} - ${unit.title}</h4>
+				<p>Year ${unit.year} • ${unit.schedule}</p>
+				<p>Next: ${new Date(unit.nextSession).toLocaleDateString()}</p>
+				<span class="unit-status ${unit.status}">${unit.status.toUpperCase()}</span>
+			</div>
+		`).join('');
+	}
+
+	function selectUnit(unitId) {
+		const unit = lecturerUnits.find(u => u.id === unitId);
+		if (!unit) return;
+
+		currentUnit = unit;
+		loadAttendanceRoster(unit);
+		show('attendanceRoster');
+	}
+
+	function loadAttendanceRoster(unit) {
+		// Update header
+		const unitTitleEl = document.getElementById('roster-unit-title');
+		const sessionInfoEl = document.getElementById('roster-session-info');
+		const rosterDateEl = document.getElementById('roster-date');
+		
+		if (unitTitleEl) unitTitleEl.textContent = `${unit.code} - ${unit.title}`;
+		if (sessionInfoEl) sessionInfoEl.textContent = `${unit.schedule} - Session Date:`;
+		if (rosterDateEl) rosterDateEl.textContent = new Date().toLocaleDateString();
+
+		// Load students for this unit
+		loadUnitStudents(unit.id);
+	}
+
+	async function loadUnitStudents(unitId) {
+		try {
+			const resp = await apiGet(`/unit_students.php?unit_code=${encodeURIComponent(currentUnit.code)}`);
+			const students = resp.students || [];
+			
+			renderRosterStudents(students);
+			updateAttendanceSummary(students);
+		} catch (err) {
+			console.error('Failed to load unit students:', err);
+			// Fallback to demo data
+			const demoStudents = [
+				{ id: 1, name: 'Alice Johnson', reg_no: 'CS001', status: 'unmarked' },
+				{ id: 2, name: 'Bob Smith', reg_no: 'CS002', status: 'present' },
+				{ id: 3, name: 'Carol Davis', reg_no: 'CS003', status: 'absent' },
+				{ id: 4, name: 'David Wilson', reg_no: 'CS004', status: 'tardy' },
+				{ id: 5, name: 'Emma Brown', reg_no: 'CS005', status: 'unmarked' }
+			];
+			renderRosterStudents(demoStudents);
+			updateAttendanceSummary(demoStudents);
+		}
+	}
+
+	function renderRosterStudents(students) {
+		const rosterList = document.getElementById('roster-students-list');
+		if (!rosterList) return;
+
+		rosterList.innerHTML = students.map(student => `
+			<div class="roster-item">
+				<div>
+					<span class="student-name-link" onclick="showStudentHistory(${student.id}, '${student.name}', '${student.reg_no}')">
+						${student.name}
+					</span>
+				</div>
+				<div>${student.reg_no}</div>
+				<div>
+					<span class="status-badge ${student.status}">${student.status.toUpperCase()}</span>
+				</div>
+				<div class="status-buttons">
+					<button class="status-btn present large ${student.status === 'present' ? 'active' : ''}" 
+						onclick="updateStudentStatus(${student.id}, 'present')">Present</button>
+					<button class="status-btn absent large ${student.status === 'absent' ? 'active' : ''}" 
+						onclick="updateStudentStatus(${student.id}, 'absent')">Absent</button>
+					<button class="status-btn tardy quick ${student.status === 'tardy' ? 'active' : ''}" 
+						onclick="updateStudentStatus(${student.id}, 'tardy')">Tardy</button>
+					<button class="status-btn excused quick ${student.status === 'excused' ? 'active' : ''}" 
+						onclick="updateStudentStatus(${student.id}, 'excused')">Excused</button>
+				</div>
+			</div>
+		`).join('');
+		
+		// Update absentee alerts
+		updateAbsenteeAlerts(students);
+	}
+
+	function updateStudentStatus(studentId, status) {
+		// Find and update student status
+		const rosterItems = document.querySelectorAll('.roster-item');
+		rosterItems.forEach(item => {
+			const buttons = item.querySelectorAll('.status-btn');
+			buttons.forEach(btn => {
+				if (btn.onclick && btn.onclick.toString().includes(studentId)) {
+					btn.classList.remove('active');
+					if (btn.classList.contains(status)) {
+						btn.classList.add('active');
+					}
+				}
+			});
+		});
+		
+		// Update attendance summary
+		const students = Array.from(rosterItems).map(item => ({
+			status: item.querySelector('.status-btn.active')?.classList[1] || 'unmarked'
+		}));
+		updateAttendanceSummary(students);
+	}
+
+	function updateAttendanceSummary(students) {
+		const presentCount = students.filter(s => s.status === 'present').length;
+		const totalCount = students.length;
+		const rate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+
+		const presentEl = document.getElementById('present-count');
+		const totalEl = document.getElementById('total-count');
+		const rateEl = document.getElementById('attendance-rate');
+
+		if (presentEl) presentEl.textContent = presentCount;
+		if (totalEl) totalEl.textContent = totalCount;
+		if (rateEl) rateEl.textContent = `${rate}%`;
+	}
+
+	function setupDashboardFilters() {
+		const gradeFilter = document.getElementById('grade-filter');
+		const studentSearch = document.getElementById('student-search');
+
+		if (gradeFilter) {
+			gradeFilter.addEventListener('change', filterUnits);
+		}
+		if (studentSearch) {
+			studentSearch.addEventListener('input', filterUnits);
+		}
+	}
+
+	function filterUnits() {
+		const gradeFilter = document.getElementById('grade-filter');
+		const studentSearch = document.getElementById('student-search');
+		
+		const selectedGrade = gradeFilter?.value;
+		const searchTerm = studentSearch?.value.toLowerCase();
+
+		const filteredUnits = lecturerUnits.filter(unit => {
+			const matchesGrade = !selectedGrade || unit.year.toString() === selectedGrade;
+			const matchesSearch = !searchTerm || 
+				unit.code.toLowerCase().includes(searchTerm) || 
+				unit.title.toLowerCase().includes(searchTerm);
+			return matchesGrade && matchesSearch;
+		});
+
+		// Re-render with filtered units
+		const unitsGrid = document.getElementById('units-grid');
+		if (unitsGrid) {
+			unitsGrid.innerHTML = filteredUnits.map(unit => `
+				<div class="unit-card" data-unit-id="${unit.id}" onclick="selectUnit(${unit.id})">
+					<h4>${unit.code} - ${unit.title}</h4>
+					<p>Year ${unit.year} • ${unit.schedule}</p>
+					<p>Next: ${new Date(unit.nextSession).toLocaleDateString()}</p>
+					<span class="unit-status ${unit.status}">${unit.status.toUpperCase()}</span>
+				</div>
+			`).join('');
+		}
+	}
+
+	function loadStudentProgress(studentId, studentName, unitCode) {
+		currentStudent = { id: studentId, name: studentName, unitCode };
+		
+		// Update header
+		const studentNameEl = document.getElementById('student-name');
+		const progressUnitEl = document.getElementById('progress-unit');
+		const progressUpdateTime = document.getElementById('progress-update-time');
+		
+		if (studentNameEl) studentNameEl.textContent = `${studentName} - CS${studentId.toString().padStart(3, '0')}`;
+		if (progressUnitEl) progressUnitEl.textContent = `${unitCode} - ${currentUnit?.title || ''}`;
+		if (progressUpdateTime) progressUpdateTime.textContent = new Date().toLocaleTimeString();
+
+		// Load student data
+		loadStudentKPIs();
+		loadStudentAssessments();
+		loadStudentAttendanceCalendar();
+		loadInterventionLog();
+		loadMissingWorkAlerts();
+		drawScoreComparisonChart();
+		
+		show('studentProgress');
+	}
+
+	function loadStudentKPIs() {
+		// Simulate KPI data
+		const currentGrade = 78;
+		const attendancePercentage = 85;
+		const riskStatus = attendancePercentage < 80 || currentGrade < 70 ? 'high' : 
+						   attendancePercentage < 85 || currentGrade < 75 ? 'medium' : 'low';
+
+		// Update KPI displays
+		const gradeEl = document.getElementById('current-grade');
+		const attendanceEl = document.getElementById('attendance-percentage');
+		const riskEl = document.getElementById('risk-status');
+
+		if (gradeEl) gradeEl.textContent = `${currentGrade}%`;
+		if (attendanceEl) attendanceEl.textContent = `${attendancePercentage}%`;
+		if (riskEl) {
+			riskEl.textContent = `${riskStatus.toUpperCase()} RISK`;
+			riskEl.className = `risk-badge ${riskStatus}`;
+		}
+
+		// Draw grade gauge
+		drawGradeGauge(currentGrade);
+	}
+
+	function drawGradeGauge(grade) {
+		const canvas = document.getElementById('grade-gauge');
+		if (!canvas) return;
+
+		const ctx = canvas.getContext('2d');
+		const centerX = canvas.width / 2;
+		const centerY = canvas.height / 2;
+		const radius = 50;
+
+		// Clear canvas
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+		// Draw background circle
+		ctx.beginPath();
+		ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+		ctx.strokeStyle = '#2a355f';
+		ctx.lineWidth = 8;
+		ctx.stroke();
+
+		// Draw progress arc
+		const progress = (grade / 100) * 2 * Math.PI;
+		ctx.beginPath();
+		ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + progress);
+		
+		// Color based on grade
+		let color = '#ef4444'; // Red
+		if (grade >= 80) color = '#22c55e'; // Green
+		else if (grade >= 70) color = '#f59e0b'; // Yellow
+		
+		ctx.strokeStyle = color;
+		ctx.lineWidth = 8;
+		ctx.lineCap = 'round';
+		ctx.stroke();
+	}
+
+	function loadStudentAssessments() {
+		const assessments = [
+			{ name: 'CAT 1', weight: 20, score: 75, classAvg: 72, status: 'Completed' },
+			{ name: 'CAT 2', weight: 20, score: 82, classAvg: 78, status: 'Completed' },
+			{ name: 'Mid-Term', weight: 30, score: 0, classAvg: 0, status: 'Pending' },
+			{ name: 'Final Exam', weight: 30, score: 0, classAvg: 0, status: 'Pending' }
+		];
+
+		const assessmentList = document.getElementById('assessment-list');
+		if (!assessmentList) return;
+
+		assessmentList.innerHTML = assessments.map(assessment => `
+			<div class="assessment-item">
+				<div>${assessment.name}</div>
+				<div>${assessment.weight}%</div>
+				<div>${assessment.score || '--'}</div>
+				<div>${assessment.classAvg || '--'}</div>
+				<div>${assessment.status}</div>
+			</div>
+		`).join('');
+	}
+
+	function loadStudentAttendanceCalendar() {
+		const calendarGrid = document.getElementById('calendar-grid');
+		if (!calendarGrid) return;
+
+		// Generate calendar for current month
+		const today = new Date();
+		const year = today.getFullYear();
+		const month = today.getMonth();
+		const daysInMonth = new Date(year, month + 1, 0).getDate();
+		
+		let calendarHTML = '';
+		for (let day = 1; day <= daysInMonth; day++) {
+			const statuses = ['present', 'absent', 'tardy', 'excused'];
+			const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+			calendarHTML += `<div class="calendar-day ${randomStatus}">${day}</div>`;
+		}
+		
+		calendarGrid.innerHTML = calendarHTML;
+	}
+
+	function loadInterventionLog() {
+		const interventionEntries = document.getElementById('intervention-entries');
+		if (!interventionEntries) return;
+
+		const interventions = [
+			{ timestamp: '2024-01-10 14:30', note: 'Discussed attendance concerns with student' },
+			{ timestamp: '2024-01-08 10:15', note: 'Emailed student about missing assignments' }
+		];
+
+		interventionEntries.innerHTML = interventions.map(intervention => `
+			<div class="intervention-entry">
+				<div class="intervention-timestamp">${intervention.timestamp}</div>
+				<div class="intervention-note">${intervention.note}</div>
+			</div>
+		`).join('');
+	}
+
+	// Enhanced Functions for Comprehensive Dashboard
+	function updateAbsenteeAlerts(students) {
+		const absenteeAlerts = document.getElementById('absentee-alerts');
+		const absentStudentsList = document.getElementById('absent-students-list');
+		
+		if (!absenteeAlerts || !absentStudentsList) return;
+
+		const absentStudents = students.filter(s => s.status === 'absent');
+		
+		if (absentStudents.length === 0) {
+			absenteeAlerts.classList.add('hidden');
+			return;
+		}
+
+		absenteeAlerts.classList.remove('hidden');
+		absentStudentsList.innerHTML = absentStudents.map(student => `
+			<div class="absent-student-item">
+				<div class="absent-student-info">
+					<div class="absent-student-name">${student.name}</div>
+					<div class="absent-student-details">
+						Last Present: ${getLastPresentDate(student.id)} | 
+						Contact: ${student.email || 'N/A'}
+					</div>
+				</div>
+				<div class="contact-actions">
+					<button class="contact-btn" onclick="emailParent('${student.email}')">📧 Email</button>
+					<button class="contact-btn" onclick="smsParent('${student.phone || 'N/A'}')">📱 SMS</button>
+				</div>
+			</div>
+		`).join('');
+	}
+
+	function getLastPresentDate(studentId) {
+		// Simulate last present date - in real app, this would come from database
+		const dates = ['2024-01-15', '2024-01-12', '2024-01-10', '2024-01-08'];
+		return dates[Math.floor(Math.random() * dates.length)];
+	}
+
+	function showStudentHistory(studentId, studentName, regNo) {
+		const modal = document.getElementById('student-history-modal');
+		const modalStudentName = document.getElementById('modal-student-name');
+		
+		if (!modal || !modalStudentName) return;
+
+		modalStudentName.textContent = `${studentName} - ${regNo}`;
+		
+		// Load student history data
+		loadStudentHistoryData(studentId);
+		
+		modal.classList.remove('hidden');
+	}
+
+	function loadStudentHistoryData(studentId) {
+		// Simulate loading student history
+		const totalSessions = 30;
+		const presentCount = Math.floor(Math.random() * 25) + 20;
+		const absentCount = totalSessions - presentCount;
+		const attendanceRate = Math.round((presentCount / totalSessions) * 100);
+
+		// Update summary
+		document.getElementById('total-sessions').textContent = totalSessions;
+		document.getElementById('total-present').textContent = presentCount;
+		document.getElementById('total-absent').textContent = absentCount;
+		document.getElementById('total-attendance-rate').textContent = `${attendanceRate}%`;
+
+		// Generate history calendar
+		generateHistoryCalendar();
+		
+		// Load notes history
+		loadNotesHistory(studentId);
+	}
+
+	function generateHistoryCalendar() {
+		const historyGrid = document.getElementById('history-calendar-grid');
+		if (!historyGrid) return;
+
+		// Generate 30-day calendar
+		let calendarHTML = '';
+		for (let day = 1; day <= 30; day++) {
+			const statuses = ['present', 'absent', 'tardy', 'excused'];
+			const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+			calendarHTML += `<div class="calendar-day ${randomStatus}" title="Day ${day} - ${randomStatus}">${day}</div>`;
+		}
+		
+		historyGrid.innerHTML = calendarHTML;
+	}
+
+	function loadNotesHistory(studentId) {
+		const notesHistory = document.getElementById('notes-history');
+		if (!notesHistory) return;
+
+		const notes = [
+			{ timestamp: '2024-01-15 10:30', content: 'Student arrived 15 minutes late - traffic issues' },
+			{ timestamp: '2024-01-12 09:15', content: 'Excused absence - medical appointment' },
+			{ timestamp: '2024-01-10 14:20', content: 'Excellent participation in class discussion' }
+		];
+
+		notesHistory.innerHTML = notes.map(note => `
+			<div class="note-history-item">
+				<div class="note-history-timestamp">${note.timestamp}</div>
+				<div class="note-history-content">${note.content}</div>
+			</div>
+		`).join('');
+	}
+
+	function emailParent(email) {
+		if (email && email !== 'N/A') {
+			window.open(`mailto:${email}?subject=Student Attendance Concern&body=Dear Parent/Guardian,%0D%0A%0D%0AWe are contacting you regarding your child's attendance. Please contact us if you have any questions.%0D%0A%0D%0ABest regards,%0D%0ASchool Administration`);
+		} else {
+			alert('Email address not available for this student.');
+		}
+	}
+
+	function smsParent(phone) {
+		if (phone && phone !== 'N/A') {
+			alert(`SMS functionality would send a message to: ${phone}\n\nIn a real application, this would integrate with an SMS service.`);
+		} else {
+			alert('Phone number not available for this student.');
+		}
+	}
+
+	function updateAttendanceNotes() {
+		const notesInput = document.getElementById('attendance-notes-input');
+		const notesTimestamp = document.getElementById('notes-timestamp');
+		
+		if (notesInput && notesTimestamp) {
+			const now = new Date();
+			notesTimestamp.textContent = `Last updated: ${now.toLocaleString()}`;
+		}
+	}
+
+	function loadMissingWorkAlerts() {
+		const missingWorkAlert = document.getElementById('missing-work-alert');
+		const missingAssignments = document.getElementById('missing-assignments');
+		
+		if (!missingWorkAlert || !missingAssignments) return;
+
+		const missingWork = [
+			{ name: 'CAT 1', due: '2024-01-20' },
+			{ name: 'Assignment 3', due: '2024-01-22' }
+		];
+
+		if (missingWork.length === 0) {
+			missingWorkAlert.classList.add('hidden');
+			return;
+		}
+
+		missingWorkAlert.classList.remove('hidden');
+		missingAssignments.innerHTML = missingWork.map(work => `
+			<div class="missing-assignment-item">
+				<div>
+					<div class="missing-assignment-name">${work.name}</div>
+					<div class="missing-assignment-due">Due: ${work.due}</div>
+				</div>
+				<button class="contact-btn" onclick="alert('Link to LMS would open here')">View in LMS</button>
+			</div>
+		`).join('');
+	}
+
+	function drawScoreComparisonChart() {
+		const canvas = document.getElementById('score-comparison-chart');
+		if (!canvas) return;
+
+		const ctx = canvas.getContext('2d');
+		
+		// Sample data
+		const assessments = ['CAT 1', 'CAT 2', 'Mid-Term', 'Final'];
+		const studentScores = [75, 82, 0, 0];
+		const classAverages = [72, 78, 0, 0];
+
+		// Clear canvas
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+		// Draw horizontal bar chart
+		const barHeight = 30;
+		const spacing = 50;
+		const startY = 50;
+
+		assessments.forEach((assessment, index) => {
+			const y = startY + (index * spacing);
+			const studentScore = studentScores[index];
+			const classAvg = classAverages[index];
+
+			// Draw assessment label
+			ctx.fillStyle = '#e9eeff';
+			ctx.font = '14px Arial';
+			ctx.fillText(assessment, 10, y + 20);
+
+			if (studentScore > 0 && classAvg > 0) {
+				// Draw class average bar
+				const classBarWidth = (classAvg / 100) * 200;
+				ctx.fillStyle = '#6b7280';
+				ctx.fillRect(150, y, classBarWidth, barHeight);
+
+				// Draw student score bar
+				const studentBarWidth = (studentScore / 100) * 200;
+				ctx.fillStyle = studentScore >= classAvg ? '#22c55e' : '#ef4444';
+				ctx.fillRect(150, y + 35, studentBarWidth, barHeight);
+
+				// Draw scores
+				ctx.fillStyle = '#e9eeff';
+				ctx.font = '12px Arial';
+				ctx.fillText(`${classAvg}%`, 160 + classBarWidth, y + 18);
+				ctx.fillText(`${studentScore}%`, 160 + studentBarWidth, y + 53);
+			} else {
+				ctx.fillStyle = '#9aa4bf';
+				ctx.fillText('Pending', 160, y + 20);
+			}
+		});
+
+		// Draw legend
+		ctx.fillStyle = '#e9eeff';
+		ctx.font = '12px Arial';
+		ctx.fillText('Class Average', 150, startY - 10);
+		ctx.fillStyle = '#22c55e';
+		ctx.fillText('Student Score', 150, startY + 5);
+	}
+
+	// Event listeners for new features
+	function setupEnhancedEventListeners() {
+		// Attendance notes
+		const notesInput = document.getElementById('attendance-notes-input');
+		if (notesInput) {
+			notesInput.addEventListener('input', updateAttendanceNotes);
+		}
+
+		// Close modal
+		const closeModal = document.getElementById('close-modal');
+		if (closeModal) {
+			closeModal.addEventListener('click', () => {
+				const modal = document.getElementById('student-history-modal');
+				if (modal) modal.classList.add('hidden');
+			});
+		}
+
+		// Email/SMS buttons
+		const emailStudentBtn = document.getElementById('email-student');
+		const emailAdvisorBtn = document.getElementById('email-advisor');
+		const smsParentBtn = document.getElementById('sms-parent');
+
+		if (emailStudentBtn) {
+			emailStudentBtn.addEventListener('click', () => {
+				const email = currentStudent?.email || 'student@example.com';
+				window.open(`mailto:${email}?subject=Attendance Concern&body=Dear Student,%0D%0A%0D%0AWe are reaching out regarding your attendance record. Please contact us if you have any questions.%0D%0A%0D%0ABest regards,%0D%0AYour Lecturer`);
+			});
+		}
+
+		if (emailAdvisorBtn) {
+			emailAdvisorBtn.addEventListener('click', () => {
+				window.open(`mailto:advisor@school.edu?subject=Student Attendance Alert&body=Dear Academic Advisor,%0D%0A%0D%0AThis student may need academic support based on their attendance record.%0D%0A%0D%0AStudent: ${currentStudent?.name || 'N/A'}%0D%0AUnit: ${currentUnit?.title || 'N/A'}%0D%0A%0D%0ABest regards,%0D%0AYour Lecturer`);
+			});
+		}
+
+		if (smsParentBtn) {
+			smsParentBtn.addEventListener('click', () => {
+				alert('SMS functionality would integrate with a messaging service to contact parents/guardians.');
+			});
+		}
+
+		// Intervention form
+		const interventionForm = document.getElementById('intervention-form');
+		if (interventionForm) {
+			interventionForm.addEventListener('submit', (e) => {
+				e.preventDefault();
+				const note = document.getElementById('intervention-note').value;
+				if (note.trim()) {
+					addInterventionEntry(note);
+					document.getElementById('intervention-note').value = '';
+				}
+			});
+		}
+	}
+
+	function addInterventionEntry(note) {
+		const interventionEntries = document.getElementById('intervention-entries');
+		if (!interventionEntries) return;
+
+		const now = new Date();
+		const timestamp = now.toLocaleString();
+		
+		const newEntry = document.createElement('div');
+		newEntry.className = 'intervention-entry';
+		newEntry.innerHTML = `
+			<div class="intervention-timestamp">${timestamp}</div>
+			<div class="intervention-note">${note}</div>
+		`;
+		
+		interventionEntries.insertBefore(newEntry, interventionEntries.firstChild);
+	}
+
+	// Global functions for onclick handlers
+	window.selectUnit = selectUnit;
+	window.updateStudentStatus = updateStudentStatus;
+	window.showStudentHistory = showStudentHistory;
+	window.emailParent = emailParent;
+	window.smsParent = smsParent;
+	window.goToDashboard = goToDashboard;
+
+	function goToDashboard() {
+		const auth = getAuth();
+		if (auth.loggedIn) {
+			if (auth.role === 'lecturer') {
+				loadLecturerDashboard();
+				show('lecturerDashboard');
+			} else if (auth.role === 'admin') {
+				loadAdminPanel();
+				show('adminPanel');
+			}
+		} else {
+			show('auth');
+			setTab('login');
+		}
+	}
+
 	// boot
 	(function start() {
+		// Setup enhanced event listeners
+		setupEnhancedEventListeners();
+		
 		const auth = getAuth();
 		if (!auth.loggedIn) { show('auth'); setTab('login'); return; }
-		show('campus'); // Start with 3D campus
+		
+		// Route based on role
+		if (auth.role === 'lecturer') {
+			loadLecturerDashboard();
+			show('lecturerDashboard');
+		} else if (auth.role === 'admin') {
+			loadAdminPanel();
+			show('adminPanel');
+		} else {
+			show('auth');
+		}
 	})();
 })();

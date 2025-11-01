@@ -1,35 +1,27 @@
 <?php
+// Enable error reporting for development
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
+
 // Basic configuration for database and CORS
 
 // Database credentials (XAMPP defaults)
-define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
-define('DB_PORT', getenv('DB_PORT') ?: '3306');
-define('DB_NAME', getenv('DB_NAME') ?: 'atte');
-define('DB_USER', getenv('DB_USER') ?: 'root');
-define('DB_PASS', getenv('DB_PASS') ?: '');
+define('DB_HOST', '127.0.0.1');
+define('DB_PORT', '3306');
+define('DB_NAME', 'atte');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_CHARSET', 'utf8mb4');
 
-// CORS configuration
-define('CORS_ALLOWED_ORIGINS', getenv('CORS_ALLOWED_ORIGINS') ?: '*');
-define('CORS_ALLOWED_METHODS', 'GET, POST, PUT, DELETE, OPTIONS');
-define('CORS_ALLOWED_HEADERS', 'Content-Type, Authorization');
-
-function sendCorsHeaders(): void {
-	header('Access-Control-Allow-Origin: ' . CORS_ALLOWED_ORIGINS);
-	header('Access-Control-Allow-Methods: ' . CORS_ALLOWED_METHODS);
-	header('Access-Control-Allow-Headers: ' . CORS_ALLOWED_HEADERS);
-	header('Access-Control-Max-Age: 86400');
+/* CORS for local dev (optional). If you serve client from same host you can restrict/remove. */
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+    header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization');
 }
-
-// Handle preflight
-if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-	sendCorsHeaders();
-	http_response_code(204);
-	exit;
-}
-
-if (isset($_SERVER['REQUEST_METHOD'])) {
-	sendCorsHeaders();
-}
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit(0);
 ?>
 
 

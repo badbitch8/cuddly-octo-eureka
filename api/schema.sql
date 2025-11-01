@@ -53,18 +53,7 @@ CREATE TABLE IF NOT EXISTS `enrollments` (
   INDEX `idx_course` (`course_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Attendance records
-CREATE TABLE IF NOT EXISTS `attendance` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `enrollment_id` INT UNSIGNED NOT NULL,
-  `date` DATE NOT NULL,
-  `status` ENUM('present', 'absent', 'late', 'excused') NOT NULL DEFAULT 'absent',
-  `timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  FOREIGN KEY (`enrollment_id`) REFERENCES `enrollments`(`id`) ON DELETE CASCADE,
-  INDEX `idx_enrollment_date` (`enrollment_id`, `date`),
-  INDEX `idx_date` (`date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- Attendance records (removed - see unified table below)
 
 -- Sample data for Murang'a University (MUT) - passwords: 'password' (hashed)
 INSERT IGNORE INTO `users` (`name`, `email`, `password_hash`, `role`) VALUES
@@ -84,5 +73,68 @@ INSERT IGNORE INTO `courses` (`code`, `title`, `faculty_id`, `year_of_study`) VA
 INSERT IGNORE INTO `enrollments` (`student_id`, `course_id`) VALUES
 (1, 1), -- Alice in BIT 101
 (2, 1); -- Bob in BIT 101
+
+-- lecturers
+CREATE TABLE IF NOT EXISTS `lecturers` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(190) NOT NULL,
+  `email` VARCHAR(190) NOT NULL UNIQUE,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `school_id` VARCHAR(80),
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- units
+CREATE TABLE IF NOT EXISTS `units` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `unit_code` VARCHAR(40) NOT NULL UNIQUE,
+  `name` VARCHAR(190) NOT NULL,
+  `title` VARCHAR(255),
+  `program_code` VARCHAR(40),
+  `year_of_study` INT,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_program` (`program_code`)
+) ENGINE=InnoDB;
+
+-- students
+CREATE TABLE IF NOT EXISTS `students` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(190) NOT NULL,
+  `reg_no` VARCHAR(100) UNIQUE,
+  `registration` VARCHAR(100) UNIQUE,
+  `year_of_study` INT,
+  `program_code` VARCHAR(40),
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_program` (`program_code`)
+) ENGINE=InnoDB;
+
+-- enrollments (students per unit)
+CREATE TABLE IF NOT EXISTS `enrollments` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `student_id` INT NOT NULL,
+  `unit_id` INT NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`student_id`) REFERENCES `students`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`unit_id`) REFERENCES `units`(`id`) ON DELETE CASCADE,
+  UNIQUE KEY `student_unit` (`student_id`, `unit_id`)
+) ENGINE=InnoDB;
+
+-- attendance (unified table with date support)
+CREATE TABLE IF NOT EXISTS `attendance` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `student_id` VARCHAR(100) NOT NULL,
+  `unit_id` INT NOT NULL,
+  `att_date` DATE NOT NULL,
+  `status` ENUM('present', 'absent', 'late', 'excused') NOT NULL DEFAULT 'absent',
+  `cat` DECIMAL(6,2) DEFAULT 0,
+  `class` DECIMAL(6,2) DEFAULT 0,
+  `exam` DECIMAL(6,2) DEFAULT 0,
+  `total` DECIMAL(6,2) DEFAULT 0,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`unit_id`) REFERENCES `units`(`id`) ON DELETE CASCADE,
+  UNIQUE KEY `unique_attendance` (`student_id`, `unit_id`, `att_date`),
+  INDEX `idx_date` (`att_date`),
+  INDEX `idx_unit_date` (`unit_id`, `att_date`)
+) ENGINE=InnoDB;
 
 

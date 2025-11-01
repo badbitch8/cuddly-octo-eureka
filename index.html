@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>School Attendance System - Home</title>
+    <style>
+        :root{
+            --bg-gradient-1: #0f1724;
+            --bg-gradient-2: #0b3a66;
+            --accent: #5cb85c;
+            --accent-2: #3bb673;
+            --card-bg: rgba(255,255,255,0.06);
+            --glass: rgba(255,255,255,0.06);
+            --muted: #cbd5e1;
+            --text: #e6eef6;
+            --shadow: 0 10px 30px rgba(2,6,23,0.6);
+            --radius: 14px;
+        }
+
+        /* Page layout */
+        html,body{
+            height:100%;
+            margin:0;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            color:var(--text);
+            background: radial-gradient(1200px 600px at 10% 20%, rgba(59,182,115,0.12), transparent 8%),
+                        radial-gradient(800px 400px at 90% 80%, rgba(92,184,92,0.08), transparent 6%),
+                        linear-gradient(180deg,var(--bg-gradient-1),var(--bg-gradient-2));
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:40px 20px;
+        }
+
+        /* Card */
+        .container{
+            width:100%;
+            max-width:900px;
+            border-radius:var(--radius);
+            background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+            box-shadow: var(--shadow);
+            display:grid;
+            grid-template-columns: 1fr 420px;
+            gap:26px;
+            padding:34px;
+            align-items:center;
+            backdrop-filter: blur(6px) saturate(120%);
+            border: 1px solid rgba(255,255,255,0.04);
+            overflow:hidden;
+        }
+
+        /* Left hero */
+        .hero {
+            padding:10px 18px;
+        }
+        .logo {
+            display:inline-flex;
+            align-items:center;
+            gap:10px;
+            margin-bottom:18px;
+        }
+        .logo .mark{
+            width:48px;
+            height:48px;
+            border-radius:10px;
+            background: linear-gradient(135deg,var(--accent),var(--accent-2));
+            display:inline-grid;
+            place-items:center;
+            font-weight:700;
+            box-shadow: 0 6px 24px rgba(55,140,80,0.18);
+            color:white;
+            font-size:20px;
+        }
+        h1{
+            margin:0 0 10px 0;
+            font-size:28px;
+            line-height:1.05;
+            color: #f7fbff;
+            letter-spacing:-0.2px;
+        }
+        p.lead{
+            margin:0 0 22px 0;
+            color:var(--muted);
+            font-size:15px;
+        }
+
+        /* CTA group */
+        .cta-row{
+            display:flex;
+            gap:12px;
+            flex-wrap:wrap;
+            align-items:center;
+        }
+        .cta-button{
+            appearance:none;
+            border:0;
+            outline:0;
+            padding:12px 18px;
+            border-radius:10px;
+            background: linear-gradient(90deg,var(--accent),var(--accent-2));
+            color:white;
+            font-weight:600;
+            cursor:pointer;
+            box-shadow: 0 8px 20px rgba(59,182,115,0.18);
+            transition:transform .15s ease, box-shadow .15s ease, opacity .12s ease;
+        }
+        .cta-button:hover{ transform:translateY(-3px); box-shadow: 0 14px 30px rgba(59,182,115,0.22); }
+        .cta-ghost{
+            padding:10px 14px;
+            background:transparent;
+            border-radius:10px;
+            color:var(--muted);
+            border:1px solid rgba(255,255,255,0.05);
+            font-weight:600;
+        }
+
+        /* Right panel - quick info / illustration */
+        .panel{
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+            padding:20px;
+            border-radius:12px;
+            display:flex;
+            flex-direction:column;
+            gap:12px;
+            align-items:center;
+            justify-content:center;
+            min-height:240px;
+            text-align:center;
+            border:1px solid rgba(255,255,255,0.03);
+        }
+        .stat{
+            font-size:44px;
+            font-weight:700;
+            color:#fff;
+            margin:0;
+        }
+        .stat-sub{
+            font-size:13px;
+            color:var(--muted);
+            margin:0;
+        }
+
+        /* Decorative floating card */
+        .floating {
+            position:absolute;
+            right:42px;
+            top:36px;
+            transform: translateZ(0);
+            background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+            padding:10px 14px;
+            border-radius:12px;
+            box-shadow: 0 8px 24px rgba(2,6,23,0.5);
+            border:1px solid rgba(255,255,255,0.03);
+            display:flex;
+            gap:10px;
+            align-items:center;
+            color:var(--muted);
+            backdrop-filter: blur(6px);
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float{
+            0%{ transform: translateY(0px); }
+            50%{ transform: translateY(8px); }
+            100%{ transform: translateY(0px); }
+        }
+
+        /* small responsive */
+        @media (max-width:880px){
+            .container{ grid-template-columns:1fr; padding:26px; gap:18px; }
+            .floating{ display:none; }
+        }
+
+        /* subtle underline for welcome message */
+        #welcome-message{
+            margin-top:12px;
+            color:var(--muted);
+            background: linear-gradient(transparent 65%, rgba(92,184,92,0.07) 65%);
+            display:inline-block;
+            padding:6px 10px;
+            border-radius:8px;
+            font-weight:500;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" role="main" aria-labelledby="hero-title">
+        <div class="hero">
+            <div class="logo" aria-hidden="true">
+                <div class="mark">A</div>
+                <div>
+                    <div style="font-weight:700;color:#dff7e0;">Attendance</div>
+                    <div style="font-size:12px;color:var(--muted);margin-top:2px;">School Attendance System</div>
+                </div>
+            </div>
+
+            <h1 id="hero-title">🎓 Welcome to the Digital Attendance System</h1>
+            <p class="lead">Fast, secure and simple — manage student and staff presence effortlessly. Try the new streamlined sign-in experience.</p>
+
+            <div class="cta-row" role="group" aria-label="Primary actions">
+                <button class="cta-button" onclick="redirectToLogin()" aria-label="Get started — open login">Get Started</button>
+                <button class="cta-ghost" onclick="openGuides()" aria-label="Learn more">How it works</button>
+                <div id="welcome-message">Please click below to <strong>Log In</strong> and manage today's attendance.</div>
+            </div>
+        </div>
+
+        <aside class="panel" aria-hidden="true">
+            <div style="width:86px;height:86px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:28px;box-shadow:0 8px 20px rgba(59,182,115,0.16);">✓</div>
+            <div class="stat">Ready in seconds</div>
+            <div class="stat-sub">Secure attendance logging  • Reports</div>
+        </aside>
+
+        <div class="floating" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="opacity:0.95"><path d="M12 2v20M2 12h20" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Quick access 
+        </div>
+    </div>
+
+    <script>
+        // --- JAVASCRIPT SECTION ---
+
+        /**
+         * Redirects to the client login form located at client/index.html
+         * relative to c:\xampp\htdocs\atte\index.html
+         */
+        function redirectToLogin() {
+            // navigate to the client login page
+            window.location.href = 'client/index.html';
+        }
+
+        function openGuides(){
+            // small helper to show quick info without leaving page
+            alert("This system lets teachers and admins record daily attendance, generate reports, and export CSVs. Click Get Started to sign in.");
+        }
+
+        /**
+         * Placeholder for a function that might fetch user data from a PHP backend
+         * and update the welcome message dynamically.
+         */
+        function checkUserSession() {
+            // Keep static for now. Replace with fetch('/check_session.php') if backend available.
+            const user = null;
+            if (user && user.name) {
+                document.getElementById('welcome-message').textContent = `Welcome back, ${user.name}!`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', checkUserSession);
+    </script>
+</body>
+</html>

@@ -23,67 +23,14 @@ try {
             jsonResponse(404, ['error' => 'Unit not found']);
         }
 
-        // Get all students for this unit
-        $studentsStmt = $pdo->prepare('
-            SELECT DISTINCT s.id, s.name, s.reg_no, s.year_of_study, s.program_code
-            FROM students s
-            INNER JOIN enrollments e ON s.id = e.student_id
-            WHERE e.unit_id = ?
-            ORDER BY s.name
+        // Get all student evaluations for this unit
+        $evaluationsStmt = $pdo->prepare('
+            SELECT * FROM student_evaluation WHERE unit_code = ?
         ');
-        $studentsStmt->execute([$unitId]);
-        $students = $studentsStmt->fetchAll();
+        $evaluationsStmt->execute([$unit['unit_code']]);
+        $evaluations = $evaluationsStmt->fetchAll();
 
-        $evaluations = [];
-
-        foreach ($students as $student) {
-            // Get attendance percentage
-            $attendanceStmt = $pdo->prepare('
-                SELECT
-                    COUNT(*) as total_classes,
-                    SUM(CASE WHEN status = "present" THEN 1 ELSE 0 END) as present_count
-                FROM attendance
-                WHERE student_id = ? AND unit_id = ?
-            ');
-            $attendanceStmt->execute([$student['reg_no'], $unitId]);
-            $attendance = $attendanceStmt->fetch();
-
-            $attendance_percentage = 0;
-            if ($attendance['total_classes'] > 0) {
-                $attendance_percentage = round(($attendance['present_count'] / $attendance['total_classes']) * 100, 1);
-            }
-
-            // Get CAT scores (assuming cat column stores the score)
-            $catStmt = $pdo->prepare('
-                SELECT AVG(cat) as avg_cat
-                FROM attendance
-                WHERE student_id = ? AND unit_id = ? AND cat > 0
-            ');
-            $catStmt->execute([$student['reg_no'], $unitId]);
-            $cat = $catStmt->fetch();
-
-            $cat_score = $cat['avg_cat'] ? round($cat['avg_cat'], 1) : 0;
-
-            // Get assignment scores (assuming we need to add this functionality)
-            // For now, we'll use a placeholder
-            $assignment_score = 0; // This would need to be implemented
-
-            // Calculate exam eligibility (50% attendance required)
-            $eligible_for_exam = $attendance_percentage >= 50;
-
-            $evaluations[] = [
-                'student_id' => $student['id'],
-                'reg_no' => $student['reg_no'],
-                'name' => $student['name'],
-                'year_of_study' => $student['year_of_study'],
-                'program' => $student['program_code'],
-                'attendance_percentage' => $attendance_percentage,
-                'cat_score' => $cat_score,
-                'assignment_score' => $assignment_score,
-                'eligible_for_exam' => $eligible_for_exam
-            ];
-        }
-
+        // Return evaluations with data from student_evaluation table
         jsonResponse(200, [
             'unit' => [
                 'id' => $unit['id'],

@@ -1,23 +1,24 @@
 <?php
-// Simple students endpoint — update DB creds and table name as needed
+// Students endpoint - fetch from students table with columns: id, name, reg_no, year_of_study, program_code
 header('Content-Type: application/json; charset=utf-8');
 require __DIR__ . '/db.php';
 
 // ensure connection for this request
 $conn = db_connect();
 
-// Align with schema: students(id, user_id, reg_no, ...), users(id, name,...)
+// Query students table directly with the specified columns
 $sql = "
-    SELECT s.id, u.name, s.reg_no
-    FROM students s
-    JOIN users u ON u.id = s.user_id
-    ORDER BY u.name
+    SELECT id, name, reg_no, year_of_study, program_code
+    FROM students
+    ORDER BY name
 ";
 
 $res = $conn->query($sql);
 $out = [];
 if ($res) {
-    while ($row = $res->fetch_assoc()) { $out[] = $row; }
+    while ($row = $res->fetch_assoc()) {
+        $out[] = $row;
+    }
     echo json_encode($out, JSON_UNESCAPED_UNICODE);
 } else {
     http_response_code(500);

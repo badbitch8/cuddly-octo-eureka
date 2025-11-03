@@ -13,13 +13,14 @@ error_reporting(E_ALL);
 require __DIR__ . '/db.php';
 
 $input = json_decode(file_get_contents('php://input'), true);
-if (!$input || empty($input['date']) || empty($input['attendance'])) {
-    echo json_encode(['success'=>false,'message'=>'Invalid payload']);
+if (!$input || empty($input['date']) || empty($input['attendance']) || !isset($input['attendance_type'])) {
+    echo json_encode(['success'=>false,'message'=>'Invalid payload or attendance_type is required']);
     exit;
 }
 
 $date = $conn->real_escape_string($input['date']);
 $unitId = isset($input['unit_id']) ? (int)$input['unit_id'] : 0;
+$attendanceType = $conn->real_escape_string($input['attendance_type']);
 $att = $input['attendance'];
 
 if ($unitId <= 0) {
@@ -27,24 +28,52 @@ if ($unitId <= 0) {
     exit;
 }
 
-// prepare statements: try update else insert (here we use REPLACE INTO for simplicity if your table has UNIQUE(student_id, unit_id, att_date))
+// Get unit_code from units table
+$unitCode = '';
 try {
-    $stmt = $conn->prepare("REPLACE INTO attendance (student_id, unit_id, att_date, status, created_at) VALUES (?, ?, ?, ?, NOW())");
+    $unitStmt = $conn->prepare("SELECT unit_code FROM units WHERE id = ?");
+    $unitStmt->bind_param('i', $unitId);
+    $unitStmt->execute();
+    $unitResult = $unitStmt->get_result();
+    if ($unitResult->num_rows > 0) {
+        $unitRow = $unitResult->fetch_assoc();
+        $unitCode = $unitRow['unit_code'];
+    } else {
+        throw new Exception('Unit not found');
+    }
+    $unitStmt->close();
+} catch (Exception $e) {
+    error_log("Error getting unit code: " . $e->getMessage());
+    echo json_encode(['success'=>false,'message'=>'Unit not found']);
+    exit;
+}
+
+try {
+    // First, delete existing attendance for this date and unit to avoid duplicates
+    $deleteStmt = $conn->prepare("DELETE FROM attendance WHERE att_date = ? AND unit_id = ?");
+    $deleteStmt->bind_param('si', $date, $unitId);
+    $deleteStmt->execute();
+    $deleteStmt->close();
+
+    // Prepare insert statement for attendance table
+    $stmt = $conn->prepare("INSERT INTO attendance (student_id, att_date, status, unit_id) VALUES (?, ?, ?, ?)");
     if (!$stmt) {
-        throw new Exception('Prepare failed: ' . $conn->error);
+        throw new Exception('Statement prepare failed: ' . $conn->error);
     }
 
     $savedCount = 0;
     foreach ($att as $row) {
-        $id = $row['id'];
-        $status = $row['status'] === 'present' ? 'present' : 'absent';
-        $stmt->bind_param('siss', $id, $unitId, $date, $status);
+        $studentId = $row['id'];
+        $status = $row['status'];
+
+        $stmt->bind_param('sssi', $studentId, $date, $status, $unitId);
         if (!$stmt->execute()) {
-            error_log("Failed to save attendance for student $id: " . $stmt->error);
+            error_log("Failed to save attendance for student $studentId: " . $stmt->error);
         } else {
             $savedCount++;
         }
     }
+
     $stmt->close();
     $conn->close();
 

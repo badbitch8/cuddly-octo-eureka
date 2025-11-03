@@ -1,0 +1,10 @@
+- [x] Add theme toggle button to settings section
+- [x] Implement JavaScript for theme switching
+- [x] Add localStorage persistence for theme preference
+- [x] Apply theme on page load
+- [x] Improve light mode visibility for all elements
+- [x] Improve dark mode visibility for all elements
+- [x] Add default attendance type selector to settings
+- [x] Implement JavaScript for default attendance type selection
+- [x] Add localStorage persistence for default attendance type
+- [x] Apply default attendance type on page load
